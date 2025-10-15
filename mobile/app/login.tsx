@@ -9,8 +9,10 @@ import {
   SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 export default function LoginScreen() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -24,18 +26,18 @@ export default function LoginScreen() {
         resizeMode="contain"
       />
 
-      {/* Card */}
+      {/* Login Card */}
       <View style={styles.card}>
         <Text style={styles.title}>Welcome Back</Text>
-        <Text style={styles.subText}>Log in to your account</Text>
+        <Text style={styles.subtitle}>Log in to your account</Text>
 
         {/* Email Input */}
         <View style={styles.inputContainer}>
-          <Ionicons name="mail-outline" size={20} color="#6B4C3B" />
+          <Ionicons name="mail-outline" size={20} color={colors.accent} />
           <TextInput
             style={styles.input}
             placeholder="Email"
-            placeholderTextColor="#9A7E6F"
+            placeholderTextColor={colors.placeholder}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -45,11 +47,15 @@ export default function LoginScreen() {
 
         {/* Password Input */}
         <View style={styles.inputContainer}>
-          <Ionicons name="lock-closed-outline" size={20} color="#6B4C3B" />
+          <Ionicons
+            name="lock-closed-outline"
+            size={20}
+            color={colors.accent}
+          />
           <TextInput
             style={styles.input}
             placeholder="Password"
-            placeholderTextColor="#9A7E6F"
+            placeholderTextColor={colors.placeholder}
             secureTextEntry={!showPassword}
             value={password}
             onChangeText={setPassword}
@@ -58,13 +64,13 @@ export default function LoginScreen() {
             <Ionicons
               name={showPassword ? "eye-off-outline" : "eye-outline"}
               size={20}
-              color="#6B4C3B"
+              color={colors.accent}
             />
           </TouchableOpacity>
         </View>
 
         {/* Forgot Password */}
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push("/forgotpassword")}>
           <Text style={styles.forgotText}>Forgot Password?</Text>
         </TouchableOpacity>
 
@@ -73,31 +79,44 @@ export default function LoginScreen() {
           <Text style={styles.buttonText}>Log In</Text>
         </TouchableOpacity>
 
-        {/* Sign Up link */}
-        <Text style={styles.subText}>
-          Don’t have an account? <Text style={styles.link}>Sign Up</Text>
+        {/* Sign Up Link */}
+        <Text style={styles.footerText}>
+          Don’t have an account?{" "}
+          <Text style={styles.link} onPress={() => router.push("/register")}>
+            Sign Up
+          </Text>
         </Text>
       </View>
     </SafeAreaView>
   );
 }
 
+const colors = {
+  background: "#0D1B2A", // deep navy
+  card: "#EAEAEA", // cream/off-white
+  accent: "#415A77", // muted slate blue
+  textPrimary: "#1B263B", // dark blue-gray
+  placeholder: "#7F8C99", // muted gray-blue
+  buttonBg: "#415A77", // slate accent
+  buttonText: "#EAEAEA", // light cream
+  link: "#1B263B", // deep navy link
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#3B2F2F", // dark academia brown
+    backgroundColor: colors.background,
     alignItems: "center",
-    justifyContent: "flex-start",
+    justifyContent: "center",
     paddingHorizontal: 24,
   },
   logo: {
-    marginTop: 80,
-    width: 200,
-    height: 200,
-    marginBottom: 20,
+    width: 140,
+    height: 140,
+    marginBottom: 24,
   },
   card: {
-    backgroundColor: "#F5F5DC", // beige card
+    backgroundColor: colors.card,
     width: "100%",
     borderRadius: 16,
     padding: 24,
@@ -107,56 +126,66 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "700",
-    color: "#2C2C2C",
+    color: colors.textPrimary,
     marginBottom: 6,
     textAlign: "center",
   },
-  subText: {
-    fontSize: 14,
-    color: "#5C4033",
+  subtitle: {
+    fontSize: 15,
+    color: colors.accent,
     textAlign: "center",
     marginBottom: 20,
-  },
-  link: {
-    color: "#8B5E3C", // vintage copper accent
-    fontWeight: "600",
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FAF9F6", // very light parchment
+    backgroundColor: "#F9FAFB",
     borderRadius: 12,
     paddingHorizontal: 12,
     marginBottom: 14,
     height: 50,
     borderWidth: 1,
-    borderColor: "#D2B48C", // muted tan border
+    borderColor: "#CBD5E1",
   },
   input: {
     flex: 1,
     marginLeft: 8,
     fontSize: 16,
-    color: "#2C2C2C",
+    color: "#111827",
   },
   forgotText: {
     alignSelf: "flex-end",
-    color: "#8B5E3C",
+    color: colors.accent,
     marginBottom: 20,
     fontSize: 13,
+    textDecorationLine: "underline",
   },
   button: {
-    backgroundColor: "#8B5E3C", // coppery brown
+    backgroundColor: colors.buttonBg,
     height: 50,
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   buttonText: {
-    color: "#F5F5DC", // beige text on button
+    color: colors.buttonText,
     fontSize: 16,
+    fontWeight: "600",
+  },
+  footerText: {
+    fontSize: 14,
+    color: colors.accent,
+    textAlign: "center",
+  },
+  link: {
+    color: colors.link,
     fontWeight: "600",
   },
 });
