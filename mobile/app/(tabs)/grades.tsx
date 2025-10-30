@@ -1,166 +1,144 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   SafeAreaView,
   View,
   Text,
-  TouchableOpacity,
-  FlatList,
   StyleSheet,
-  Modal,
-  TextInput,
+  TouchableOpacity,
+  ImageBackground,
+  FlatList,
+  StatusBar,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 const colors = {
-  background: "#0D1B2A",
-  card: "#EAEAEA",
-  accent: "#415A77",
-  textPrimary: "#1B263B",
-  buttonBg: "#415A77",
-  buttonText: "#EAEAEA",
-  gradeHigh: "#16A34A",
-  gradeLow: "#B91C1C",
-  overlay: "rgba(0,0,0,0.5)",
+  background: "#0D1B2A", // deep navy
+  card: "#EAEAEA", // cream/off-white
+  accent: "#415A77", // muted slate blue
+  textPrimary: "#1B263B", // dark blue-gray
+  placeholder: "#7F8C99", // muted gray-blue
+  buttonBg: "#415A77", // slate accent
+  buttonText: "#EAEAEA", // light cream
 };
 
-interface GradeRecord {
-  id: string;
-  name: string;
-  grade: number;
-}
-
 export default function GradesScreen() {
-  const [grades, setGrades] = useState<GradeRecord[]>([
-    { id: "1", name: "Alice Johnson", grade: 94 },
-    { id: "2", name: "Mark Lee", grade: 88 },
-    { id: "3", name: "Sophia Chen", grade: 91 },
-    { id: "4", name: "David Cruz", grade: 76 },
-  ]);
+  const router = useRouter();
 
-  const [modalVisible, setModalVisible] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newGrade, setNewGrade] = useState("");
+  const grades = [
+    {
+      id: "1",
+      course: "Mobile Programming - USTP",
+      section: "IT3R11 - BSIT",
+      instructor: "User-01",
+      schedule: [
+        { day: "Monday", time: "3:30pm" },
+        { day: "Thursday", time: "3:30pm" },
+      ],
+    },
+    {
+      id: "2",
+      course: "Mobile Programming - USTP",
+      section: "IT3R12 - BSIT",
+      instructor: "User-01",
+      schedule: [
+        { day: "Tuesday", time: "7:00am" },
+        { day: "Friday", time: "7:00am" },
+      ],
+    },
+    {
+      id: "3",
+      course: "Mobile Programming - USTP",
+      section: "IT3R13 - BSIT",
+      instructor: "User-01",
+      schedule: [
+        { day: "Monday", time: "8:30am" },
+        { day: "Wednesday", time: "8:30am" },
+      ],
+    },
+  ];
 
-  const renderGrade = ({ item }: { item: GradeRecord }) => (
-    <View style={styles.card}>
-      <View style={styles.info}>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text
-          style={[
-            styles.grade,
-            {
-              color:
-                item.grade >= 90
-                  ? colors.gradeHigh
-                  : item.grade < 80
-                  ? colors.gradeLow
-                  : colors.accent,
-            },
-          ]}
-        >
-          Grade: {item.grade}
-        </Text>
+  const renderGradeCard = ({ item }: any) => (
+    <TouchableOpacity
+      style={styles.courseCard}
+      activeOpacity={0.8}
+      onPress={() =>
+        router.push({
+          pathname: "/(tabs)/grades/[gradeid]",
+          params: {
+            gradeid: item.id,
+            course: item.course,
+            section: item.section,
+            instructor: item.instructor,
+          },
+        })
+      }
+    >
+      <View style={styles.cardHeader}>
+        <Text style={styles.courseTitle}>{item.course}</Text>
+        <Text style={styles.courseSection}>{item.section}</Text>
+        <Text style={styles.courseUser}>{item.instructor}</Text>
       </View>
 
-      <View style={styles.actions}>
-        <TouchableOpacity style={styles.iconButton}>
-          <Ionicons name="create-outline" size={20} color={colors.accent} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.iconButton}>
-          <Ionicons name="trash-outline" size={20} color="#B91C1C" />
-        </TouchableOpacity>
+      <View style={styles.cardFooter}>
+        <View>
+          {item.schedule.map((sched: any, index: number) => (
+            <Text key={index} style={styles.scheduleText}>
+              {sched.day} - {sched.time}
+            </Text>
+          ))}
+        </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
-
-  const handleSave = () => {
-    if (!newName || !newGrade) {
-      setModalVisible(false);
-      return;
-    }
-
-    const newRecord: GradeRecord = {
-      id: Date.now().toString(),
-      name: newName,
-      grade: parseInt(newGrade),
-    };
-
-    setGrades((prev) => [...prev, newRecord]);
-    setNewName("");
-    setNewGrade("");
-    setModalVisible(false);
-  };
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.header}>Grade Management</Text>
-      <View style={styles.divider} />
+      {/* HEADER */}
+      <View style={styles.headerCard}>
+        <ImageBackground
+          source={require("../../assets/images/header-bg.jpg")}
+          style={styles.headerBg}
+          imageStyle={{ borderRadius: 20 }}
+          resizeMode="cover"
+        >
+          <View style={styles.headerOverlay} />
 
-      <FlatList
-        data={grades}
-        keyExtractor={(item) => item.id}
-        renderItem={renderGrade}
-        contentContainerStyle={{ paddingBottom: 100 }}
-        showsVerticalScrollIndicator={false}
-      />
+          <TouchableOpacity
+            onPress={() => router.push("/(tabs)/home")}
+            style={styles.backBtn}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.buttonText} />
+          </TouchableOpacity>
 
-      {/* Floating Add Button */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => setModalVisible(true)}
-      >
-        <Ionicons name="add" size={28} color={colors.buttonText} />
-      </TouchableOpacity>
-
-      {/* Add Grade Modal */}
-      <Modal
-        transparent
-        animationType="slide"
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Add Grade</Text>
-
-            <TextInput
-              style={styles.input}
-              placeholder="Student Name"
-              placeholderTextColor="#7F8C99"
-              value={newName}
-              onChangeText={setNewName}
+          <TouchableOpacity style={styles.bellButton}>
+            <Ionicons
+              name="notifications-outline"
+              size={24}
+              color={colors.buttonText}
             />
+            <View style={styles.badge} />
+          </TouchableOpacity>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Grade (e.g., 90)"
-              placeholderTextColor="#7F8C99"
-              value={newGrade}
-              onChangeText={setNewGrade}
-              keyboardType="numeric"
-            />
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: "#9CA3AF" }]}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.modalButton,
-                  { backgroundColor: colors.buttonBg },
-                ]}
-                onPress={handleSave}
-              >
-                <Text style={styles.modalButtonText}>Save</Text>
-              </TouchableOpacity>
+          {/* HEADER CONTENT */}
+          <View style={styles.headerContent}>
+            <View style={styles.headerLeft}>
+              <Text style={styles.welcomeText}>Grades</Text>
+              <Text style={styles.subText}>Input Grades of your Students</Text>
             </View>
           </View>
-        </View>
-      </Modal>
+        </ImageBackground>
+      </View>
+
+      {/* GRADE LIST */}
+      <FlatList
+        data={grades}
+        renderItem={renderGradeCard}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+      />
     </SafeAreaView>
   );
 }
@@ -168,115 +146,117 @@ export default function GradesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
-    padding: 20,
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: colors.card,
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#2C3E50",
-    marginBottom: 16,
-    opacity: 0.4,
-  },
-  card: {
     backgroundColor: colors.card,
-    borderRadius: 14,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    paddingTop:
+      Platform.OS === "android" ? (StatusBar.currentHeight ?? 24) + 8 : 16,
   },
-  info: {
-    flex: 1,
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: colors.textPrimary,
-  },
-  grade: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginTop: 4,
-  },
-  actions: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  iconButton: {
-    marginLeft: 12,
-  },
-  fab: {
-    position: "absolute",
-    bottom: 24,
-    right: 24,
-    backgroundColor: colors.buttonBg,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+
+  /** HEADER **/
+  headerCard: {
+    backgroundColor: colors.background,
+    height: 170,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    marginBottom: 20,
+    overflow: "hidden",
     elevation: 6,
   },
-  modalOverlay: {
+  headerBg: {
     flex: 1,
-    backgroundColor: colors.overlay,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
+    justifyContent: "space-between",
+    padding: 20,
   },
-  modalCard: {
+  headerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(13,27,42,0.6)",
+  },
+  bellButton: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    padding: 8,
+    borderRadius: 12,
+    zIndex: 2,
+  },
+  badge: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: 24,
-    width: "100%",
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: colors.textPrimary,
-    marginBottom: 16,
-    textAlign: "center",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 12,
-    fontSize: 16,
-    color: "#111827",
-    backgroundColor: "#F9FAFB",
-  },
-  modalButtons: {
+  headerContent: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 8,
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    marginHorizontal: 4,
     alignItems: "center",
+    flex: 1,
+    paddingTop: 40,
   },
-  modalButtonText: {
+  headerLeft: {
+    flex: 1,
+  },
+  welcomeText: {
+    fontSize: 26,
+    fontWeight: "700",
     color: colors.buttonText,
-    fontWeight: "600",
-    fontSize: 15,
+  },
+  subText: {
+    fontSize: 14,
+    color: colors.card,
+    marginTop: 4,
+  },
+
+  /** COURSE CARD (Copied from Class) **/
+  courseCard: {
+    backgroundColor: colors.background,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
+    marginBottom: 25,
+    overflow: "hidden",
+    elevation: 3,
+  },
+  cardHeader: {
+    padding: 12,
+  },
+  courseTitle: {
+    color: colors.card,
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  courseSection: {
+    color: colors.accent,
+    fontSize: 14,
+    marginTop: 2,
+  },
+  courseUser: {
+    color: colors.card,
+    fontSize: 13,
+    marginTop: 2,
+  },
+  cardFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: colors.accent,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+  },
+  scheduleText: {
+    color: colors.card,
+    fontSize: 13,
+  },
+  backBtn: {
+    position: "absolute",
+    top: 16,
+    left: 16,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    padding: 8,
+    borderRadius: 12,
+    zIndex: 2,
   },
 });

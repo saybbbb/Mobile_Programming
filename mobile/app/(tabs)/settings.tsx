@@ -8,48 +8,68 @@ import {
   Switch,
   StyleSheet,
   Alert,
+  Platform,
+  StatusBar,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 const colors = {
-  background: "#0D1B2A",
-  card: "#EAEAEA",
+  background: "#EAEAEA",
+  card: "#FFFFFF",
   accent: "#415A77",
   textPrimary: "#1B263B",
   buttonBg: "#415A77",
   buttonText: "#EAEAEA",
-  divider: "#2C3E50",
+  divider: "#D6DEE6",
 };
 
 export default function SettingsScreen() {
   const [darkMode, setDarkMode] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const router = useRouter();
 
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to log out?", [
       { text: "Cancel", style: "cancel" },
-      { text: "Log Out", onPress: () => console.log("Logged out") },
+      {
+        text: "Log Out",
+        onPress: () => {
+          // Navigate to login screen
+          router.replace("/login");
+        },
+        style: "destructive",
+      },
     ]);
   };
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* 🔙 Back Button */}
+      <TouchableOpacity
+        style={styles.backBtn}
+        onPress={() => router.push("/(tabs)/home")}
+      >
+        <Ionicons name="arrow-back" size={24} color={colors.accent} />
+      </TouchableOpacity>
+
+      {/* 🧾 Header */}
       <Text style={styles.header}>Settings</Text>
       <View style={styles.divider} />
 
-      {/* Profile Section */}
+      {/* 👩‍🏫 Profile Section */}
       <View style={styles.profileCard}>
         <Image
           source={require("../../assets/images/profile-placeholder.jpg")}
           style={styles.profileImage}
         />
         <View>
-          <Text style={styles.profileName}>Prof. Emily Carter</Text>
-          <Text style={styles.profileEmail}>emily.carter@college.edu</Text>
+          <Text style={styles.profileName}>User-01</Text>
+          <Text style={styles.profileEmail}>test@email.com</Text>
         </View>
       </View>
 
-      {/* Account Section */}
+      {/* ⚙️ Account Section */}
       <Text style={styles.sectionTitle}>Account</Text>
       <TouchableOpacity style={styles.option}>
         <Ionicons name="key-outline" size={22} color={colors.accent} />
@@ -70,7 +90,7 @@ export default function SettingsScreen() {
         />
       </TouchableOpacity>
 
-      {/* Preferences Section */}
+      {/* 🌙 Preferences Section */}
       <Text style={styles.sectionTitle}>Preferences</Text>
       <TouchableOpacity style={styles.option}>
         <Ionicons name="moon-outline" size={22} color={colors.accent} />
@@ -82,13 +102,7 @@ export default function SettingsScreen() {
         />
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.option}>
-        <Ionicons name="language-outline" size={22} color={colors.accent} />
-        <Text style={styles.optionText}>Language</Text>
-        <Text style={styles.optionValue}>English</Text>
-      </TouchableOpacity>
-
-      {/* Logout Button */}
+      {/* 🚪 Logout Button */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Ionicons name="log-out-outline" size={20} color="#fff" />
         <Text style={styles.logoutText}>Log Out</Text>
@@ -102,20 +116,33 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     padding: 20,
+    paddingTop:
+      Platform.OS === "android" ? (StatusBar.currentHeight ?? 24) + 8 : 16,
+  },
+
+  /** HEADER **/
+  backBtn: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(0,0,0,0.05)",
+    padding: 8,
+    borderRadius: 12,
+    // marginBottom: 10,
   },
   header: {
     fontSize: 24,
     fontWeight: "700",
-    color: colors.card,
+    color: colors.textPrimary,
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 12,
   },
   divider: {
     height: 1,
-    backgroundColor: colors.divider,
+    backgroundColor: colors.textPrimary,
     marginBottom: 16,
-    opacity: 0.4,
+    opacity: 0.7,
   },
+
+  /** PROFILE **/
   profileCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -144,10 +171,12 @@ const styles = StyleSheet.create({
     color: colors.accent,
     marginTop: 4,
   },
+
+  /** SECTIONS **/
   sectionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: colors.card,
+    color: colors.textPrimary,
     marginBottom: 10,
   },
   option: {
@@ -170,10 +199,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textPrimary,
   },
-  optionValue: {
-    fontSize: 14,
-    color: colors.accent,
-  },
+
+  /** LOGOUT **/
   logoutButton: {
     flexDirection: "row",
     alignItems: "center",
