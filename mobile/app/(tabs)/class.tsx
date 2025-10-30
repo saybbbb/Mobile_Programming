@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ImageBackground,
+  Image,
   FlatList,
   StatusBar,
   Platform,
@@ -14,24 +15,30 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
 const colors = {
-  background: "#0D1B2A", // deep navy
-  card: "#EAEAEA", // cream/off-white
-  accent: "#415A77", // muted slate blue
-  textPrimary: "#1B263B", // dark blue-gray
-  placeholder: "#7F8C99", // muted gray-blue
-  buttonBg: "#415A77", // slate accent
-  buttonText: "#EAEAEA", // light cream
+  background: "#0D1B2A",
+  card: "#EAEAEA",
+  accent: "#415A77",
+  textPrimary: "#1B263B",
+  placeholder: "#7F8C99",
+  buttonBg: "#415A77",
+  buttonText: "#EAEAEA",
 };
 
-export default function GradesScreen() {
+export default function ClassScreen() {
   const router = useRouter();
+  const today = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 
-  const grades = [
+  const courses = [
     {
       id: "1",
       course: "Mobile Programming - USTP",
       section: "IT3R11 - BSIT",
-      instructor: "User-01",
+      user: "User-01",
       schedule: [
         { day: "Monday", time: "3:30pm" },
         { day: "Thursday", time: "3:30pm" },
@@ -41,7 +48,7 @@ export default function GradesScreen() {
       id: "2",
       course: "Mobile Programming - USTP",
       section: "IT3R12 - BSIT",
-      instructor: "User-01",
+      user: "User-01",
       schedule: [
         { day: "Tuesday", time: "7:00am" },
         { day: "Friday", time: "7:00am" },
@@ -51,7 +58,7 @@ export default function GradesScreen() {
       id: "3",
       course: "Mobile Programming - USTP",
       section: "IT3R13 - BSIT",
-      instructor: "User-01",
+      user: "User-01",
       schedule: [
         { day: "Monday", time: "8:30am" },
         { day: "Wednesday", time: "8:30am" },
@@ -59,18 +66,18 @@ export default function GradesScreen() {
     },
   ];
 
-  const renderGradeCard = ({ item }: any) => (
+  const renderCourseCard = ({ item }: any) => (
     <TouchableOpacity
       style={styles.courseCard}
       activeOpacity={0.8}
       onPress={() =>
         router.push({
-          pathname: "/(tabs)/attendance/[attendanceid]",
+          pathname: "/(tabs)/class/[classid]",
           params: {
-            gradeid: item.id,
+            classid: item.id,
             course: item.course,
             section: item.section,
-            instructor: item.instructor,
+            user: item.user,
           },
         })
       }
@@ -78,7 +85,7 @@ export default function GradesScreen() {
       <View style={styles.cardHeader}>
         <Text style={styles.courseTitle}>{item.course}</Text>
         <Text style={styles.courseSection}>{item.section}</Text>
-        <Text style={styles.courseUser}>{item.instructor}</Text>
+        <Text style={styles.courseUser}>{item.user}</Text>
       </View>
 
       <View style={styles.cardFooter}>
@@ -88,6 +95,11 @@ export default function GradesScreen() {
               {sched.day} - {sched.time}
             </Text>
           ))}
+        </View>
+        <View style={styles.iconRow}>
+          <Ionicons name="people-outline" size={20} color={colors.card} />
+          <Ionicons name="folder-outline" size={20} color={colors.card} />
+          <Ionicons name="ellipsis-vertical" size={20} color={colors.card} />
         </View>
       </View>
     </TouchableOpacity>
@@ -104,7 +116,6 @@ export default function GradesScreen() {
           resizeMode="cover"
         >
           <View style={styles.headerOverlay} />
-
           <TouchableOpacity
             onPress={() => router.push("/(tabs)/home")}
             style={styles.backBtn}
@@ -121,20 +132,26 @@ export default function GradesScreen() {
             <View style={styles.badge} />
           </TouchableOpacity>
 
-          {/* HEADER CONTENT */}
+          {/* Header Content */}
           <View style={styles.headerContent}>
             <View style={styles.headerLeft}>
-              <Text style={styles.welcomeText}>Attendance Tracking</Text>
-              <Text style={styles.subText}>Checks Student Punctuality</Text>
+              <Text style={styles.welcomeText}>Class Sections</Text>
+              <Text style={styles.subText}>Manage your Section/Class</Text>
+              <Text style={styles.dateText}>{today}</Text>
             </View>
+
+            <Image
+              source={require("../../assets/images/profile-placeholder.jpg")}
+              style={styles.profileImage}
+            />
           </View>
         </ImageBackground>
       </View>
 
-      {/* GRADE LIST */}
+      {/* COURSE LIST */}
       <FlatList
-        data={grades}
-        renderItem={renderGradeCard}
+        data={courses}
+        renderItem={renderCourseCard}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
@@ -161,11 +178,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     elevation: 6,
   },
-  headerBg: {
-    flex: 1,
-    justifyContent: "space-between",
-    padding: 20,
-  },
+  headerBg: { flex: 1, justifyContent: "space-between", padding: 20 },
   headerOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(13,27,42,0.6)",
@@ -195,21 +208,29 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 40,
   },
-  headerLeft: {
-    flex: 1,
+  headerLeft: { flex: 1 },
+  welcomeText: { fontSize: 26, fontWeight: "700", color: colors.buttonText },
+  subText: { fontSize: 14, color: colors.card, marginTop: 4 },
+  dateText: {
+    backgroundColor: colors.card,
+    color: colors.textPrimary,
+    fontWeight: "600",
+    fontSize: 13,
+    alignSelf: "flex-start",
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    marginTop: 10,
   },
-  welcomeText: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: colors.buttonText,
-  },
-  subText: {
-    fontSize: 14,
-    color: colors.card,
-    marginTop: 4,
+  profileImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    borderWidth: 2,
+    borderColor: colors.card,
   },
 
-  /** COURSE CARD (Copied from Class) **/
+  /** COURSE CARD **/
   courseCard: {
     backgroundColor: colors.background,
     borderBottomLeftRadius: 25,
@@ -218,24 +239,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     elevation: 3,
   },
-  cardHeader: {
-    padding: 12,
-  },
-  courseTitle: {
-    color: colors.card,
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  courseSection: {
-    color: colors.accent,
-    fontSize: 14,
-    marginTop: 2,
-  },
-  courseUser: {
-    color: colors.card,
-    fontSize: 13,
-    marginTop: 2,
-  },
+  cardHeader: { padding: 12 },
+  courseTitle: { color: colors.card, fontSize: 16, fontWeight: "bold" },
+  courseSection: { color: colors.accent, fontSize: 14, marginTop: 2 },
+  courseUser: { color: colors.card, fontSize: 13, marginTop: 2 },
   cardFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -246,10 +253,8 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 16,
     borderBottomRightRadius: 16,
   },
-  scheduleText: {
-    color: colors.card,
-    fontSize: 13,
-  },
+  scheduleText: { color: colors.card, fontSize: 13 },
+  iconRow: { flexDirection: "row", gap: 16 },
   backBtn: {
     position: "absolute",
     top: 16,

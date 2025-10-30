@@ -3,137 +3,156 @@ import {
   SafeAreaView,
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
+  TouchableOpacity,
+  ImageBackground,
+  Image,
   FlatList,
+  StatusBar,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
 const colors = {
-  background: "#0D1B2A",
-  card: "#EAEAEA",
-  accent: "#415A77",
-  textPrimary: "#1B263B",
-  buttonBg: "#415A77",
-  buttonText: "#EAEAEA",
-  divider: "#2C3E50",
+  background: "#0D1B2A", // deep navy
+  card: "#EAEAEA", // cream/off-white
+  accent: "#415A77", // muted slate blue
+  textPrimary: "#1B263B", // dark blue-gray
+  placeholder: "#7F8C99", // muted gray-blue
+  buttonBg: "#415A77", // slate accent
+  buttonText: "#EAEAEA", // light cream
+  link: "#1B263B", // deep navy link
 };
 
 export default function HomeScreen() {
   const router = useRouter();
+  const today = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 
-  const quickStats = [
-    { id: "1", label: "Students", value: "24", icon: "people-outline" },
-    { id: "2", label: "Attendance", value: "93%", icon: "calendar-outline" },
-    { id: "3", label: "Avg Grade", value: "88.5", icon: "bar-chart-outline" },
-  ];
-
-  const shortcuts: {
-    id: string;
-    title: string;
-    icon: string;
-    route:
-      | "/(tabs)/students"
-      | "/(tabs)/attendance"
-      | "/(tabs)/grades"
-      | "/(tabs)/reports";
-  }[] = [
+  const quickLinks = [
     {
       id: "1",
-      title: "Manage Students",
-      icon: "school-outline",
-      route: "/(tabs)/students",
+      title: "Placeholder",
+      icon: "calendar-outline",
+      route: "/(tabs)/placeholder",
     },
     {
       id: "2",
-      title: "Attendance",
-      icon: "checkmark-done-outline",
-      route: "/(tabs)/attendance",
+      title: "Placeholder",
+      icon: "megaphone-outline",
+      route: "/(tabs)/placeholder",
     },
     {
       id: "3",
-      title: "Grades",
-      icon: "clipboard-outline",
-      route: "/(tabs)/grades",
-    },
-    {
-      id: "4",
-      title: "Reports",
-      icon: "analytics-outline",
-      route: "/(tabs)/reports",
+      title: "Placeholder",
+      icon: "bar-chart-outline",
+      route: "/(tabs)/placeholder",
     },
   ];
 
-  const recentUpdates = [
-    {
-      id: "1",
-      title: "Attendance marked for October 10",
-      time: "2h ago",
-    },
-    {
-      id: "2",
-      title: "Grades updated for midterm exams",
-      time: "Yesterday",
-    },
-    {
-      id: "3",
-      title: "New student added: Sarah Kim",
-      time: "2 days ago",
-    },
-  ];
-
-  const renderUpdate = ({
-    item,
-  }: {
-    item: { id: string; title: string; time: string };
-  }) => (
-    <View style={styles.updateCard}>
-      <Text style={styles.updateTitle}>{item.title}</Text>
-      <Text style={styles.updateTime}>{item.time}</Text>
-    </View>
+  const renderLink = ({ item }: any) => (
+    <TouchableOpacity
+      style={styles.linkCard}
+      onPress={() => router.push(item.route)}
+    >
+      <View style={styles.linkLeft}>
+        <Ionicons name={item.icon as any} size={22} color={colors.buttonText} />
+        <Text style={styles.linkText}>{item.title}</Text>
+      </View>
+      <Ionicons
+        name="chevron-forward-outline"
+        size={22}
+        color={colors.buttonText}
+      />
+    </TouchableOpacity>
   );
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.header}>Welcome back, Prof. Emily 👋</Text>
-      <View style={styles.divider} />
+      {/* HEADER */}
+      <View style={styles.headerCard}>
+        <ImageBackground
+          source={require("../../assets/images/header-bg.jpg")}
+          style={styles.headerBg}
+          imageStyle={{ borderRadius: 20 }}
+          resizeMode="cover"
+        >
+          <View style={styles.headerOverlay} />
 
-      {/* Quick Stats */}
-      <View style={styles.statsContainer}>
-        {quickStats.map((stat) => (
-          <View key={stat.id} style={styles.statCard}>
-            <Ionicons name={stat.icon as any} size={26} color={colors.accent} />
-            <Text style={styles.statValue}>{stat.value}</Text>
-            <Text style={styles.statLabel}>{stat.label}</Text>
-          </View>
-        ))}
-      </View>
-
-      {/* Shortcuts */}
-      <Text style={styles.sectionTitle}>Quick Access</Text>
-      <View style={styles.shortcutContainer}>
-        {shortcuts.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            style={styles.shortcutButton}
-            onPress={() => router.push(item.route)}
-          >
-            <Ionicons name={item.icon as any} size={24} color={colors.accent} />
-            <Text style={styles.shortcutText}>{item.title}</Text>
+          {/* Bell at Top Right */}
+          <TouchableOpacity style={styles.bellButton}>
+            <Ionicons
+              name="notifications-outline"
+              size={24}
+              color={colors.buttonText}
+            />
+            <View style={styles.badge} />
           </TouchableOpacity>
-        ))}
+
+          {/* Content Row */}
+          <View style={styles.headerContent}>
+            <View style={styles.headerLeft}>
+              <Text style={styles.welcomeText}>Welcome!</Text>
+              <Text style={styles.subText}>
+                Hi User-01, Make Ravenscroft Proud!
+              </Text>
+              <Text style={styles.dateText}>{today}</Text>
+            </View>
+
+            <Image
+              source={require("../../assets/images/profile-placeholder.jpg")}
+              style={styles.profileImage}
+            />
+          </View>
+        </ImageBackground>
       </View>
 
-      {/* Recent Updates */}
-      <Text style={styles.sectionTitle}>Recent Updates</Text>
-      <FlatList
-        data={recentUpdates}
-        keyExtractor={(item) => item.id}
-        renderItem={renderUpdate}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 }}
-      />
+      <View style={styles.contentContainer}>
+        {/* CLASS SCHEDULE */}
+        <View style={styles.classSection}>
+          <Text style={styles.classTitle}>Class Schedule</Text>
+
+          <View style={styles.classRow}>
+            <View style={styles.classCard}>
+              <Text style={styles.classLabel}>Current</Text>
+              <Text style={styles.classValue}>BSIT 3A</Text>
+            </View>
+            <Ionicons
+              name="time-outline"
+              size={28}
+              color={colors.accent}
+              style={styles.classIcon}
+            />
+            <View style={styles.classCard}>
+              <Text style={styles.classLabel}>Next</Text>
+              <Text style={styles.classValue}>BSIT 4C</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* QUICK ACCESS */}
+        <View style={styles.quickSection}>
+          <View style={styles.quickHeader}>
+            <Text style={styles.quickTitle}>Quick Access</Text>
+            <TouchableOpacity>
+              <Text style={styles.viewAll}>View all</Text>
+            </TouchableOpacity>
+          </View>
+
+          <FlatList
+            data={quickLinks}
+            renderItem={renderLink}
+            keyExtractor={(item) => item.id}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 60 }}
+          />
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -141,98 +160,161 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.card,
+    paddingTop:
+      Platform.OS === "android" ? (StatusBar.currentHeight ?? 24) + 8 : 16,
+  },
+
+  /** HEADER **/
+  headerCard: {
     backgroundColor: colors.background,
+    height: 170,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    marginBottom: 30,
+    overflow: "hidden",
+    elevation: 6,
+  },
+  headerBg: {
+    flex: 1,
+    justifyContent: "space-between",
     padding: 20,
   },
-  header: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: colors.card,
-    textAlign: "center",
-    marginBottom: 8,
+  headerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(13,27,42,0.6)",
   },
-  divider: {
-    height: 1,
-    backgroundColor: colors.divider,
-    marginBottom: 16,
-    opacity: 0.4,
+  bellButton: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    padding: 8,
+    borderRadius: 12,
+    zIndex: 2,
   },
-  statsContainer: {
+  badge: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.card,
+  },
+  headerContent: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 24,
-  },
-  statCard: {
+    alignItems: "center",
     flex: 1,
-    backgroundColor: colors.card,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: "center",
-    marginHorizontal: 4,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    paddingTop: 40,
   },
-  statValue: {
-    fontSize: 18,
+  headerLeft: {
+    flex: 1,
+  },
+  welcomeText: {
+    fontSize: 26,
     fontWeight: "700",
-    color: colors.textPrimary,
-    marginTop: 6,
+    color: colors.buttonText,
   },
-  statLabel: {
-    fontSize: 13,
-    color: colors.accent,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: colors.card,
-    marginBottom: 10,
-  },
-  shortcutContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    marginBottom: 24,
-  },
-  shortcutButton: {
-    backgroundColor: colors.card,
-    width: "48%",
-    borderRadius: 14,
-    padding: 16,
-    alignItems: "center",
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  shortcutText: {
+  subText: {
     fontSize: 14,
-    color: colors.textPrimary,
-    fontWeight: "600",
-    marginTop: 6,
-    textAlign: "center",
-  },
-  updateCard: {
-    backgroundColor: colors.card,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  updateTitle: {
-    fontSize: 15,
-    color: colors.textPrimary,
-    fontWeight: "600",
-  },
-  updateTime: {
-    fontSize: 12,
-    color: colors.accent,
+    color: colors.card,
     marginTop: 4,
   },
+  dateText: {
+    backgroundColor: colors.card,
+    color: colors.textPrimary,
+    fontWeight: "600",
+    fontSize: 13,
+    alignSelf: "flex-start",
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    marginTop: 10,
+  },
+  profileImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    borderWidth: 2,
+    borderColor: colors.card,
+  },
+
+  /** CONTENT **/
+  contentContainer: {
+    flex: 1,
+    padding: 20,
+  },
+
+  /** CLASS SCHEDULE **/
+  classSection: {
+    backgroundColor: colors.background,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 50,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  classTitle: {
+    color: colors.card,
+    fontWeight: "700",
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  classRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+    gap: 12,
+  },
+  classIcon: {
+    marginHorizontal: 8,
+  },
+  classCard: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 14,
+    minWidth: 110,
+    alignItems: "center",
+    flex: 1,
+  },
+  classLabel: { fontSize: 13, color: colors.placeholder },
+  classValue: { fontSize: 16, color: colors.textPrimary, fontWeight: "600" },
+
+  /** QUICK ACCESS **/
+  quickTitle: {
+    color: colors.textPrimary,
+    fontWeight: "700",
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  quickSection: { flex: 1 },
+  quickHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    marginBottom: 10,
+  },
+  viewAll: {
+    color: colors.link,
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  linkCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.buttonBg,
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    marginBottom: 12,
+    elevation: 2,
+  },
+  linkLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
+  linkText: { color: colors.buttonText, fontSize: 15, fontWeight: "600" },
 });

@@ -7,37 +7,20 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: "#415A77",
-        tabBarInactiveTintColor: "#9CA3AF",
-        tabBarStyle: { backgroundColor: "#EAEAEA" },
+        tabBarInactiveTintColor: "#EAEAEA",
+        tabBarStyle: { backgroundColor: "#0D1B2A" },
       }}
     >
       <Tabs.Screen
-        name="home"
+        name="class"
         options={{
-          title: "Home",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="students"
-        options={{
-          title: "Students",
+          title: "Class",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" color={color} size={size} />
           ),
         }}
       />
-      <Tabs.Screen
-        name="attendance"
-        options={{
-          title: "Attendance",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar-outline" color={color} size={size} />
-          ),
-        }}
-      />
+
       <Tabs.Screen
         name="grades"
         options={{
@@ -47,6 +30,17 @@ export default function TabsLayout() {
           ),
         }}
       />
+
+      <Tabs.Screen
+        name="attendance"
+        options={{
+          title: "Attendance",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="calendar-outline" color={color} size={size} />
+          ),
+        }}
+      />
+
       <Tabs.Screen
         name="reports"
         options={{
@@ -56,6 +50,7 @@ export default function TabsLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="settings"
         options={{
@@ -63,6 +58,37 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="settings-outline" color={color} size={size} />
           ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="home"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="class/[classid]"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="grades/[gradeid]"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="attendance/[attendanceid]"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="reports/[reportid]"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
