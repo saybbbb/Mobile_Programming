@@ -11,7 +11,6 @@ export default function TabsLayout() {
         tabBarStyle: { backgroundColor: "#0D1B2A" },
       }}
     >
-      {/* 🔹 Match folder names (index.tsx inside each folder will be used automatically) */}
       <Tabs.Screen
         name="class"
         options={{
@@ -62,7 +61,6 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* 🔸 Hide nested detail screens (they shouldn't appear as tabs) */}
       <Tabs.Screen
         name="home"
         options={{
