@@ -24,7 +24,7 @@ const userSchema = new mongoose.Schema({
     },
 
     PhoneNumber: {
-        type: int,
+        type: String,
         required: true,
 
     },
@@ -47,6 +47,11 @@ userSchema.pre("save", async function (next) {
     this.Password = await bcrypt.hash(this.Password, salt);
     next();
 })
+
+
+userSchema.methods.comparePassword = async function (userPassword) {
+    return await bcrypt.compare(userPassword, this.Password);
+}
 
 const User = mongoose.model("User", userSchema);
 
