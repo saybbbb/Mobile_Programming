@@ -1,17 +1,49 @@
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  View,
+  Alert,
+  SafeAreaView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
+  View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import API from "../services/api";
 
 export default function RegisterScreen() {
   const router = useRouter();
+
+  const handleRegister = async () => {
+    if (!name || !phone || !email || !password || !confirmPassword) {
+      Alert.alert("Error", "All fields are required");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert("Error", "Passwords do not match");
+      return;
+    }
+
+    try {
+      await API.post("/auth/register", {
+        fullName: name,
+        email,
+        password,
+        confirmPassword,
+        phoneNumber: phone,
+      });
+
+      Alert.alert("Success", "Account created. Please log in.");
+      router.replace("/login");
+    } catch (err: any) {
+      Alert.alert(
+        "Registration Failed",
+        err.response?.data?.message || "Unable to connect to server"
+      );
+    }
+  };
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -117,7 +149,7 @@ export default function RegisterScreen() {
         </View>
 
         {/* Register Button */}
-        <TouchableOpacity style={styles.button}>
+        <TouchableOpacity style={styles.button} onPress={handleRegister}>
           <Text style={styles.buttonText}>Sign Up</Text>
         </TouchableOpacity>
 

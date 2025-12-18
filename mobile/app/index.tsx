@@ -1,9 +1,10 @@
-import React, { useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
-  useRouter,
   useRootNavigation,
   useRootNavigationState,
+  useRouter,
 } from "expo-router";
+import React, { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 
 export default function Index() {
@@ -12,9 +13,18 @@ export default function Index() {
   const rootState = useRootNavigationState();
 
   useEffect(() => {
-    if (!rootNavigation || !rootState?.key) return; // wait until router is ready
-    const timer = setTimeout(() => router.replace("/login"), 0);
-    return () => clearTimeout(timer);
+    if (!rootNavigation || !rootState?.key) return;
+
+    const checkAuth = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+        router.replace(token ? "/(tabs)/home" : "/login");
+      } catch {
+        router.replace("/login");
+      }
+    };
+
+    checkAuth();
   }, [rootNavigation, rootState?.key]);
 
   return (

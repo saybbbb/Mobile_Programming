@@ -1,18 +1,20 @@
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  Alert,
+  Image,
+  Platform,
   SafeAreaView,
-  View,
+  StatusBar,
+  StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
-  Image,
-  Switch,
-  StyleSheet,
-  Alert,
-  Platform,
-  StatusBar,
+  View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import API from "../../services/api";
 
 const colors = {
   background: "#EAEAEA",
@@ -34,11 +36,16 @@ export default function SettingsScreen() {
       { text: "Cancel", style: "cancel" },
       {
         text: "Log Out",
-        onPress: () => {
-          // Navigate to login screen
-          router.replace("/login");
-        },
         style: "destructive",
+        onPress: async () => {
+          try {
+            await AsyncStorage.multiRemove(["token", "user"]);
+            delete API.defaults.headers.common["Authorization"];
+            router.replace("/login");
+          } catch {
+            Alert.alert("Error", "Failed to log out properly");
+          }
+        },
       },
     ]);
   };
