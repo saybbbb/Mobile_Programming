@@ -37,10 +37,10 @@ export default function AttendanceScreen() {
   const router = useRouter();
 
   const [records, setRecords] = useState<AttendanceRecord[]>([
-    { id: "1", name: "Alice Johnson", status: "Present" },
-    { id: "2", name: "Mark Lee", status: "Absent" },
-    { id: "3", name: "Sophia Chen", status: "Present" },
-    { id: "4", name: "David Cruz", status: "Absent" },
+    { id: "1", name: "Student 1", status: "Present" },
+    { id: "2", name: "Student 2", status: "Absent" },
+    { id: "3", name: "Student 3", status: "Present" },
+    { id: "4", name: "Student 4", status: "Absent" },
   ]);
 
   const toggleStatus = (id: string) => {
