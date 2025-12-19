@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Image,
@@ -26,11 +26,35 @@ const colors = {
   divider: "#D6DEE6",
 };
 
+type StoredUser = {
+  fullName: string;
+  email: string;
+  profileImage?: string;
+};
+
 export default function SettingsScreen() {
   const [darkMode, setDarkMode] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [user, setUser] = useState<StoredUser | null>(null);
   const router = useRouter();
 
+  // 🔹 Load user from AsyncStorage
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const storedUser = await AsyncStorage.getItem("user");
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
+      } catch (error) {
+        console.log("Failed to load user:", error);
+      }
+    };
+
+    loadUser();
+  }, []);
+
+  // 🔹 Logout (already correct, just kept)
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to log out?", [
       { text: "Cancel", style: "cancel" },
@@ -64,15 +88,23 @@ export default function SettingsScreen() {
       <Text style={styles.header}>Settings</Text>
       <View style={styles.divider} />
 
-      {/* 👩‍🏫 Profile Section */}
+      {/* 👤 Profile Section */}
       <View style={styles.profileCard}>
         <Image
-          source={require("../../assets/images/profile-placeholder.jpg")}
+          source={
+            user?.profileImage
+              ? { uri: user.profileImage }
+              : require("../../assets/images/profile-placeholder.jpg")
+          }
           style={styles.profileImage}
         />
         <View>
-          <Text style={styles.profileName}>User-01</Text>
-          <Text style={styles.profileEmail}>test@email.com</Text>
+          <Text style={styles.profileName}>
+            {user?.fullName || "User"}
+          </Text>
+          <Text style={styles.profileEmail}>
+            {user?.email || ""}
+          </Text>
         </View>
       </View>
 

@@ -43,7 +43,9 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Phone number already taken" });
     }
 
-    const profileImage = `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`;
+    const profileImage = `https://api.dicebear.com/7.x/avataaars/png?seed=${encodeURIComponent(
+      email
+    )}&size=128`;
 
     const user = await User.create({
       fullName,
@@ -62,6 +64,7 @@ router.post("/register", async (req, res) => {
         fullName: user.fullName,
         email: user.email,
         phoneNumber: user.phoneNumber,
+        profileImage: user.profileImage,
       },
     });
   } catch (error) {
@@ -98,6 +101,7 @@ router.post("/login", async (req, res) => {
         fullName: user.fullName,
         email: user.email,
         phoneNumber: user.phoneNumber,
+        profileImage: user.profileImage,
       },
     });
   } catch (error) {

@@ -1,18 +1,19 @@
-import React from "react";
-import {
-  SafeAreaView,
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ImageBackground,
-  Image,
-  FlatList,
-  StatusBar,
-  Platform,
-} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  FlatList,
+  Image,
+  ImageBackground,
+  Platform,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 const colors = {
   background: "#0D1B2A",
@@ -24,8 +25,32 @@ const colors = {
   buttonText: "#EAEAEA",
 };
 
+type StoredUser = {
+  fullName: string;
+  email: string;
+  profileImage?: string;
+};
+
 export default function ClassScreen() {
   const router = useRouter();
+  const [user, setUser] = useState<StoredUser | null>(null);
+
+  // 🔹 Load user from AsyncStorage
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const storedUser = await AsyncStorage.getItem("user");
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
+      } catch (err) {
+        console.log("Failed to load user:", err);
+      }
+    };
+
+    loadUser();
+  }, []);
+
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -38,7 +63,7 @@ export default function ClassScreen() {
       id: "1",
       course: "Mobile Programming - USTP",
       section: "IT3R11 - BSIT",
-      user: "User-01",
+      user: user?.fullName || "User",
       schedule: [
         { day: "Monday", time: "3:30pm" },
         { day: "Thursday", time: "3:30pm" },
@@ -48,7 +73,7 @@ export default function ClassScreen() {
       id: "2",
       course: "Mobile Programming - USTP",
       section: "IT3R12 - BSIT",
-      user: "User-01",
+      user: user?.fullName || "User",
       schedule: [
         { day: "Tuesday", time: "7:00am" },
         { day: "Friday", time: "7:00am" },
@@ -58,7 +83,7 @@ export default function ClassScreen() {
       id: "3",
       course: "Mobile Programming - USTP",
       section: "IT3R13 - BSIT",
-      user: "User-01",
+      user: user?.fullName || "User",
       schedule: [
         { day: "Monday", time: "8:30am" },
         { day: "Wednesday", time: "8:30am" },
@@ -116,6 +141,7 @@ export default function ClassScreen() {
           resizeMode="cover"
         >
           <View style={styles.headerOverlay} />
+
           <TouchableOpacity
             onPress={() => router.push("/(tabs)/home")}
             style={styles.backBtn}
@@ -141,7 +167,11 @@ export default function ClassScreen() {
             </View>
 
             <Image
-              source={require("../../assets/images/profile-placeholder.jpg")}
+              source={
+                user?.profileImage
+                  ? { uri: user.profileImage }
+                  : require("../../assets/images/profile-placeholder.jpg")
+              }
               style={styles.profileImage}
             />
           </View>
