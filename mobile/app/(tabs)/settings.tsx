@@ -5,12 +5,14 @@ import React, { useEffect, useState } from "react";
 import {
   Alert,
   Image,
+  Modal,
   Platform,
   SafeAreaView,
   StatusBar,
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -33,28 +35,33 @@ type StoredUser = {
 };
 
 export default function SettingsScreen() {
+  const router = useRouter();
+
   const [darkMode, setDarkMode] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [user, setUser] = useState<StoredUser | null>(null);
-  const router = useRouter();
 
-  // 🔹 Load user from AsyncStorage
+  /* CHANGE PASSWORD */
+  const [passwordModal, setPasswordModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  /* SHOW / HIDE PASSWORD */
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  /* LOAD USER */
   useEffect(() => {
     const loadUser = async () => {
-      try {
-        const storedUser = await AsyncStorage.getItem("user");
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        }
-      } catch (error) {
-        console.log("Failed to load user:", error);
-      }
+      const storedUser = await AsyncStorage.getItem("user");
+      if (storedUser) setUser(JSON.parse(storedUser));
     };
-
     loadUser();
   }, []);
 
-  // 🔹 Logout (already correct, just kept)
+  /* LOGOUT */
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to log out?", [
       { text: "Cancel", style: "cancel" },
@@ -62,21 +69,53 @@ export default function SettingsScreen() {
         text: "Log Out",
         style: "destructive",
         onPress: async () => {
-          try {
-            await AsyncStorage.multiRemove(["token", "user"]);
-            delete API.defaults.headers.common["Authorization"];
-            router.replace("/login");
-          } catch {
-            Alert.alert("Error", "Failed to log out properly");
-          }
+          await AsyncStorage.multiRemove(["token", "user"]);
+          delete API.defaults.headers.common["Authorization"];
+          router.replace("/login");
         },
       },
     ]);
   };
 
+  /* CHANGE PASSWORD */
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return Alert.alert("Error", "All fields are required");
+    }
+
+    if (newPassword.length < 6) {
+      return Alert.alert(
+        "Error",
+        "New password must be at least 6 characters"
+      );
+    }
+
+    if (newPassword !== confirmPassword) {
+      return Alert.alert("Error", "Passwords do not match");
+    }
+
+    try {
+      await API.put("/auth/change-password", {
+        currentPassword,
+        newPassword,
+      });
+
+      Alert.alert("Success", "Password updated successfully");
+      setPasswordModal(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      Alert.alert(
+        "Error",
+        err.response?.data?.message || "Failed to change password"
+      );
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* 🔙 Back Button */}
+      {/* BACK */}
       <TouchableOpacity
         style={styles.backBtn}
         onPress={() => router.push("/(tabs)/home")}
@@ -84,11 +123,11 @@ export default function SettingsScreen() {
         <Ionicons name="arrow-back" size={24} color={colors.accent} />
       </TouchableOpacity>
 
-      {/* 🧾 Header */}
+      {/* HEADER */}
       <Text style={styles.header}>Settings</Text>
       <View style={styles.divider} />
 
-      {/* 👤 Profile Section */}
+      {/* PROFILE */}
       <View style={styles.profileCard}>
         <Image
           source={
@@ -99,18 +138,18 @@ export default function SettingsScreen() {
           style={styles.profileImage}
         />
         <View>
-          <Text style={styles.profileName}>
-            {user?.fullName || "User"}
-          </Text>
-          <Text style={styles.profileEmail}>
-            {user?.email || ""}
-          </Text>
+          <Text style={styles.profileName}>{user?.fullName}</Text>
+          <Text style={styles.profileEmail}>{user?.email}</Text>
         </View>
       </View>
 
-      {/* ⚙️ Account Section */}
+      {/* ACCOUNT */}
       <Text style={styles.sectionTitle}>Account</Text>
-      <TouchableOpacity style={styles.option}>
+
+      <TouchableOpacity
+        style={styles.option}
+        onPress={() => setPasswordModal(true)}
+      >
         <Ionicons name="key-outline" size={22} color={colors.accent} />
         <Text style={styles.optionText}>Change Password</Text>
       </TouchableOpacity>
@@ -129,8 +168,9 @@ export default function SettingsScreen() {
         />
       </TouchableOpacity>
 
-      {/* 🌙 Preferences Section */}
+      {/* PREFERENCES */}
       <Text style={styles.sectionTitle}>Preferences</Text>
+
       <TouchableOpacity style={styles.option}>
         <Ionicons name="moon-outline" size={22} color={colors.accent} />
         <Text style={styles.optionText}>Dark Mode</Text>
@@ -141,14 +181,97 @@ export default function SettingsScreen() {
         />
       </TouchableOpacity>
 
-      {/* 🚪 Logout Button */}
+      {/* LOGOUT */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Ionicons name="log-out-outline" size={20} color="#fff" />
         <Text style={styles.logoutText}>Log Out</Text>
       </TouchableOpacity>
+
+      {/* CHANGE PASSWORD MODAL */}
+      <Modal visible={passwordModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>Change Password</Text>
+
+            {/* CURRENT */}
+            <View style={styles.passwordRow}>
+              <TextInput
+                placeholder="Current Password"
+                secureTextEntry={!showCurrent}
+                style={styles.passwordInput}
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+              />
+              <TouchableOpacity onPress={() => setShowCurrent(!showCurrent)}>
+                <Ionicons
+                  name={showCurrent ? "eye-off" : "eye"}
+                  size={22}
+                  color={colors.accent}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* NEW */}
+            <View style={styles.passwordRow}>
+              <TextInput
+                placeholder="New Password"
+                secureTextEntry={!showNew}
+                style={styles.passwordInput}
+                value={newPassword}
+                onChangeText={setNewPassword}
+              />
+              <TouchableOpacity onPress={() => setShowNew(!showNew)}>
+                <Ionicons
+                  name={showNew ? "eye-off" : "eye"}
+                  size={22}
+                  color={colors.accent}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* CONFIRM */}
+            <View style={styles.passwordRow}>
+              <TextInput
+                placeholder="Confirm New Password"
+                secureTextEntry={!showConfirm}
+                style={styles.passwordInput}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+              />
+              <TouchableOpacity
+                onPress={() => setShowConfirm(!showConfirm)}
+              >
+                <Ionicons
+                  name={showConfirm ? "eye-off" : "eye"}
+                  size={22}
+                  color={colors.accent}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: "#aaa" }]}
+                onPress={() => setPasswordModal(false)}
+              >
+                <Text style={styles.modalBtnText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: colors.accent }]}
+                onPress={handleChangePassword}
+              >
+                <Text style={styles.modalBtnText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
+
+/* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
   container: {
@@ -158,19 +281,15 @@ const styles = StyleSheet.create({
     paddingTop:
       Platform.OS === "android" ? (StatusBar.currentHeight ?? 24) + 8 : 16,
   },
-
-  /** HEADER **/
   backBtn: {
     alignSelf: "flex-start",
     backgroundColor: "rgba(0,0,0,0.05)",
     padding: 8,
     borderRadius: 12,
-    // marginBottom: 10,
   },
   header: {
     fontSize: 24,
     fontWeight: "700",
-    color: colors.textPrimary,
     textAlign: "center",
     marginBottom: 12,
   },
@@ -180,8 +299,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     opacity: 0.7,
   },
-
-  /** PROFILE **/
   profileCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -189,10 +306,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 16,
     marginBottom: 24,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   profileImage: {
     width: 60,
@@ -200,24 +313,10 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     marginRight: 14,
   },
-  profileName: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: colors.textPrimary,
-  },
-  profileEmail: {
-    fontSize: 14,
-    color: colors.accent,
-    marginTop: 4,
-  },
+  profileName: { fontSize: 18, fontWeight: "700" },
+  profileEmail: { fontSize: 14, color: colors.accent },
 
-  /** SECTIONS **/
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: colors.textPrimary,
-    marginBottom: 10,
-  },
+  sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 10 },
   option: {
     backgroundColor: colors.card,
     borderRadius: 12,
@@ -225,38 +324,59 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     marginBottom: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
   },
-  optionText: {
-    flex: 1,
-    marginLeft: 10,
-    fontSize: 15,
-    color: colors.textPrimary,
-  },
+  optionText: { flex: 1, marginLeft: 10 },
 
-  /** LOGOUT **/
   logoutButton: {
     flexDirection: "row",
-    alignItems: "center",
     backgroundColor: "#B91C1C",
     justifyContent: "center",
     paddingVertical: 14,
     borderRadius: 12,
     marginTop: 30,
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 6,
   },
-  logoutText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 15,
-    marginLeft: 8,
+  logoutText: { color: "#fff", fontWeight: "600", marginLeft: 8 },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    alignItems: "center",
   },
+  modal: {
+    width: "85%",
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+  },
+  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
+
+  passwordRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    marginBottom: 10,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 10,
+  },
+
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 8,
+  },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    marginHorizontal: 4,
+    alignItems: "center",
+  },
+  modalBtnText: { color: "#fff", fontWeight: "600" },
 });

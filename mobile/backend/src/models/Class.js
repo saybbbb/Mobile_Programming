@@ -1,5 +1,8 @@
 import mongoose from "mongoose";
+import Attendance from "./Attendance.js";
+import Bulletin from "./Bulletin.js";
 import Student from "./Student.js";
+import Task from "./Task.js";
 
 const scheduleSchema = new mongoose.Schema(
   {
@@ -47,11 +50,21 @@ const classSchema = new mongoose.Schema(
 );
 
 /**
- * Cascade delete students when a class is deleted
+ * ===============================
+ * CASCADE DELETE (ASYNC, SAFE)
+ * ===============================
+ * Triggered ONLY by:
+ * Class.findOneAndDelete()
  */
-classSchema.pre("findOneAndDelete", async function (next) {
+classSchema.pre("findOneAndDelete", async function () {
   const classId = this.getQuery()._id;
-  await Student.deleteMany({ classId });
+
+  await Promise.all([
+    Student.deleteMany({ classId }),
+    Attendance.deleteMany({ classId }),
+    Task.deleteMany({ classId }),
+    Bulletin.deleteMany({ classId }),
+  ]);
 });
 
 export default mongoose.model("Class", classSchema);

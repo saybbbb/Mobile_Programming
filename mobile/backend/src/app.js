@@ -1,4 +1,5 @@
 import express from "express";
+import attendanceRoutes from "./routes/attendanceRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import bulletinRoutes from "./routes/bulletinRoutes.js";
 import classRoutes from "./routes/classRoutes.js";
@@ -13,5 +14,6 @@ app.use("/api/classes", classRoutes);
 app.use("/api/classes", studentRoutes);
 app.use("/api/classes", bulletinRoutes);
 app.use("/api/classes", taskRoutes);
+app.use("/api/classes", attendanceRoutes);
 
 export default app;

@@ -1,65 +1,73 @@
-import React from "react";
-import {
-  SafeAreaView,
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ImageBackground,
-  FlatList,
-  StatusBar,
-  Platform,
-} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  FlatList,
+  ImageBackground,
+  Platform,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import api from "../../services/api";
 
 const colors = {
-  background: "#0D1B2A", // deep navy
-  card: "#EAEAEA", // cream/off-white
-  accent: "#415A77", // muted slate blue
-  textPrimary: "#1B263B", // dark blue-gray
-  placeholder: "#7F8C99", // muted gray-blue
-  buttonBg: "#415A77", // slate accent
-  buttonText: "#EAEAEA", // light cream
+  background: "#0D1B2A",
+  card: "#EAEAEA",
+  accent: "#415A77",
+  textPrimary: "#1B263B",
+  placeholder: "#7F8C99",
+  buttonBg: "#415A77",
+  buttonText: "#EAEAEA",
+};
+
+type StoredUser = {
+  fullName: string;
+  profileImage?: string;
+};
+
+type ClassItem = {
+  _id: string;
+  course: string;
+  section: string;
+  instructor: string;
+  schedule: { day: string; time: string }[];
 };
 
 export default function GradesScreen() {
   const router = useRouter();
+  const [classes, setClasses] = useState<ClassItem[]>([]);
+  const [user, setUser] = useState<StoredUser | null>(null);
 
-  const grades = [
-    {
-      id: "1",
-      course: "Mobile Programming - USTP",
-      section: "IT3R11 - BSIT",
-      instructor: "User-01",
-      schedule: [
-        { day: "Monday", time: "3:30pm" },
-        { day: "Thursday", time: "3:30pm" },
-      ],
-    },
-    {
-      id: "2",
-      course: "Mobile Programming - USTP",
-      section: "IT3R12 - BSIT",
-      instructor: "User-01",
-      schedule: [
-        { day: "Tuesday", time: "7:00am" },
-        { day: "Friday", time: "7:00am" },
-      ],
-    },
-    {
-      id: "3",
-      course: "Mobile Programming - USTP",
-      section: "IT3R13 - BSIT",
-      instructor: "User-01",
-      schedule: [
-        { day: "Monday", time: "8:30am" },
-        { day: "Wednesday", time: "8:30am" },
-      ],
-    },
-  ];
+  /* LOAD USER */
+  useEffect(() => {
+    AsyncStorage.getItem("user").then((u) => {
+      if (u) setUser(JSON.parse(u));
+    });
+  }, []);
 
-  const renderGradeCard = ({ item }: any) => (
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      const loadClasses = async () => {
+        const res = await api.get("/classes");
+        if (isActive) setClasses(res.data);
+      };
+
+      loadClasses();
+
+      return () => {
+        isActive = false;
+      };
+    }, [])
+  );
+
+  const renderClassCard = ({ item }: { item: ClassItem }) => (
     <TouchableOpacity
       style={styles.courseCard}
       activeOpacity={0.8}
@@ -67,10 +75,7 @@ export default function GradesScreen() {
         router.push({
           pathname: "/(tabs)/grades/[gradeid]",
           params: {
-            gradeid: item.id,
-            course: item.course,
-            section: item.section,
-            instructor: item.instructor,
+            gradeid: item._id,
           },
         })
       }
@@ -78,12 +83,12 @@ export default function GradesScreen() {
       <View style={styles.cardHeader}>
         <Text style={styles.courseTitle}>{item.course}</Text>
         <Text style={styles.courseSection}>{item.section}</Text>
-        <Text style={styles.courseUser}>{item.instructor}</Text>
+        <Text style={styles.courseUser}>{user?.fullName}</Text>
       </View>
 
       <View style={styles.cardFooter}>
         <View>
-          {item.schedule.map((sched: any, index: number) => (
+          {item.schedule.map((sched, index) => (
             <Text key={index} style={styles.scheduleText}>
               {sched.day} - {sched.time}
             </Text>
@@ -121,27 +126,31 @@ export default function GradesScreen() {
             <View style={styles.badge} />
           </TouchableOpacity>
 
-          {/* HEADER CONTENT */}
           <View style={styles.headerContent}>
             <View style={styles.headerLeft}>
               <Text style={styles.welcomeText}>Grades</Text>
-              <Text style={styles.subText}>Input Grades of your Students</Text>
+              <Text style={styles.subText}>Select a class to input grades</Text>
             </View>
           </View>
         </ImageBackground>
       </View>
 
-      {/* GRADE LIST */}
+      {/* CLASS LIST */}
       <FlatList
-        data={grades}
-        renderItem={renderGradeCard}
-        keyExtractor={(item) => item.id}
+        data={classes}
+        renderItem={renderClassCard}
+        keyExtractor={(item) => item._id}
         contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>No classes found</Text>
+        }
       />
     </SafeAreaView>
   );
 }
+
+/* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
   container: {
@@ -151,7 +160,6 @@ const styles = StyleSheet.create({
       Platform.OS === "android" ? (StatusBar.currentHeight ?? 24) + 8 : 16,
   },
 
-  /** HEADER **/
   headerCard: {
     backgroundColor: colors.background,
     height: 170,
@@ -190,7 +198,6 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
     flex: 1,
     paddingTop: 40,
@@ -209,7 +216,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  /** COURSE CARD (Copied from Class) **/
   courseCard: {
     backgroundColor: colors.background,
     borderBottomLeftRadius: 25,
@@ -237,9 +243,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   cardFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     backgroundColor: colors.accent,
     paddingVertical: 10,
     paddingHorizontal: 14,
@@ -258,5 +261,11 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 12,
     zIndex: 2,
+  },
+  emptyText: {
+    textAlign: "center",
+    marginTop: 40,
+    color: colors.textPrimary,
+    opacity: 0.6,
   },
 });

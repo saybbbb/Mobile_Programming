@@ -1,16 +1,19 @@
-import React, { useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { useFocusEffect } from "@react-navigation/native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useState } from "react";
 import {
-  SafeAreaView,
-  View,
+  Alert,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  Platform,
-  StatusBar,
-  ScrollView,
+  View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import api from "../../../services/api";
 
 const colors = {
   background: "#EAEAEA",
@@ -18,71 +21,124 @@ const colors = {
   darkHeader: "#0D1B2A",
   accent: "#415A77",
   textPrimary: "#1B263B",
-  buttonBg: "#415A77",
-  buttonText: "#EAEAEA",
   tableHeader: "#F5F7FA",
-  absent: "#B91C1C",
   present: "#16A34A",
+  absent: "#B91C1C",
   divider: "#D6DEE6",
 };
 
-interface AttendanceRecord {
-  id: string;
+type AttendanceStudent = {
+  _id: string;
   name: string;
   status: "Present" | "Absent";
-}
+};
 
-export default function AttendanceScreen() {
-  const { attendanceid, course, section } = useLocalSearchParams();
+export default function AttendanceDetails() {
+  const { attendanceid } = useLocalSearchParams<{ attendanceid: string }>();
   const router = useRouter();
 
-  const [records, setRecords] = useState<AttendanceRecord[]>([
-    { id: "1", name: "Student 1", status: "Present" },
-    { id: "2", name: "Student 2", status: "Absent" },
-    { id: "3", name: "Student 3", status: "Present" },
-    { id: "4", name: "Student 4", status: "Absent" },
-  ]);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showPicker, setShowPicker] = useState(false);
+
+  const [students, setStudents] = useState<AttendanceStudent[]>([]);
+  const [classInfo, setClassInfo] = useState<{
+    course: string;
+    section: string;
+  } | null>(null);
+
+  const formattedDate = selectedDate.toISOString().split("T")[0];
+
+  /* ================= FETCH ================= */
+
+  const loadAttendance = async () => {
+    if (!attendanceid) return;
+
+    const [classRes, attendanceRes] = await Promise.all([
+      api.get(`/classes/${attendanceid}`),
+      api.get(`/classes/${attendanceid}/attendance`, {
+        params: { date: formattedDate },
+      }),
+    ]);
+
+    setClassInfo(classRes.data);
+    setStudents(attendanceRes.data);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadAttendance();
+    }, [attendanceid, formattedDate])
+  );
+
+  /* ================= ACTIONS ================= */
 
   const toggleStatus = (id: string) => {
-    setRecords((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? { ...r, status: r.status === "Present" ? "Absent" : "Present" }
-          : r
+    setStudents((prev) =>
+      prev.map((s) =>
+        s._id === id
+          ? { ...s, status: s.status === "Present" ? "Absent" : "Present" }
+          : s
       )
     );
   };
 
   const markAllPresent = () => {
-    setRecords((prev) => prev.map((r) => ({ ...r, status: "Present" })));
+    setStudents((prev) => prev.map((s) => ({ ...s, status: "Present" })));
   };
 
+  const saveAttendance = () => {
+    Alert.alert("Save Attendance", `Save attendance for ${formattedDate}?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Save",
+        onPress: async () => {
+          await api.post(`/classes/${attendanceid}/attendance`, {
+            date: formattedDate,
+            records: students.map((s) => ({
+              studentId: s._id,
+              status: s.status,
+            })),
+          });
+
+          Alert.alert("Success", "Attendance saved successfully");
+        },
+      },
+    ]);
+  };
+
+  /* ================= RENDER ================= */
+
   return (
-    <SafeAreaView style={styles.wrapper}>
-      {/* 🔙 Back Button */}
-      <TouchableOpacity
-        onPress={() => router.push("/(tabs)/attendance")}
-        style={styles.backBtn}
-      >
-        <Ionicons name="arrow-back" size={24} color={colors.accent} />
-      </TouchableOpacity>
-
-      {/* 🧾 HEADER */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Attendance Tracking</Text>
-        <Text style={styles.courseTitle}>
-          {course || "Mobile Programming - USTP"}
-        </Text>
-        <Text style={styles.sectionText}>{section || "IT3R11 - BSIT"}</Text>
-      </View>
-
-      {/* 📋 TABLE CONTENT */}
+    <View style={styles.wrapper}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: 120 }}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 140 }}
       >
-        {/* Table Header */}
+        {/* BACK */}
+        <TouchableOpacity
+          onPress={() => router.replace("/(tabs)/attendance")}
+          style={styles.backBtn}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.accent} />
+        </TouchableOpacity>
+
+        {/* HEADER */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Attendance</Text>
+          <Text style={styles.courseTitle}>{classInfo?.course}</Text>
+          <Text style={styles.sectionText}>{classInfo?.section}</Text>
+
+          {/* DATE PICKER */}
+          <TouchableOpacity
+            style={styles.dateBtn}
+            onPress={() => setShowPicker(true)}
+          >
+            <Ionicons name="calendar-outline" size={16} color="#fff" />
+            <Text style={styles.dateText}>{formattedDate}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* TABLE HEADER */}
         <View style={styles.tableHeader}>
           <Text style={[styles.headerText, { flex: 4, textAlign: "left" }]}>
             Student
@@ -91,12 +147,10 @@ export default function AttendanceScreen() {
           <Text style={[styles.headerText, { flex: 3 }]}>Action</Text>
         </View>
 
-        {/* Table Rows */}
-        {records.map((item) => (
-          <View key={item.id} style={styles.tableRow}>
-            <Text style={[styles.cellText, { flex: 4, textAlign: "left" }]}>
-              {item.name}
-            </Text>
+        {/* ROWS */}
+        {students.map((s) => (
+          <View key={s._id} style={styles.tableRow}>
+            <Text style={[styles.cellText, { flex: 4 }]}>{s.name}</Text>
 
             <Text
               style={[
@@ -105,11 +159,11 @@ export default function AttendanceScreen() {
                   flex: 2,
                   textAlign: "center",
                   color:
-                    item.status === "Present" ? colors.present : colors.absent,
+                    s.status === "Present" ? colors.present : colors.absent,
                 },
               ]}
             >
-              {item.status}
+              {s.status}
             </Text>
 
             <TouchableOpacity
@@ -117,73 +171,91 @@ export default function AttendanceScreen() {
                 styles.statusButton,
                 {
                   backgroundColor:
-                    item.status === "Present" ? colors.present : colors.absent,
+                    s.status === "Present" ? colors.present : colors.absent,
                 },
               ]}
-              onPress={() => toggleStatus(item.id)}
+              onPress={() => toggleStatus(s._id)}
             >
               <Text style={styles.buttonLabel}>
-                {item.status === "Present" ? "Mark Absent" : "Mark Present"}
+                {s.status === "Present" ? "Mark Absent" : "Mark Present"}
               </Text>
             </TouchableOpacity>
           </View>
         ))}
+
+        {students.length === 0 && (
+          <Text style={styles.emptyText}>No students found for this date</Text>
+        )}
       </ScrollView>
 
-      {/* ✅ Floating Button */}
-      <TouchableOpacity style={styles.fab} onPress={markAllPresent}>
-        <Ionicons name="checkmark-done" size={28} color={colors.buttonText} />
-      </TouchableOpacity>
-    </SafeAreaView>
+      {/* FLOATING ACTIONS */}
+      <View style={styles.fabContainer}>
+        <TouchableOpacity style={styles.fab} onPress={markAllPresent}>
+          <Ionicons name="checkmark-done" size={26} color="#fff" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.fab} onPress={saveAttendance}>
+          <Ionicons name="save-outline" size={26} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
+      {/* DATE PICKER MODAL */}
+      {showPicker && (
+        <DateTimePicker
+          value={selectedDate}
+          mode="date"
+          display={Platform.OS === "ios" ? "spinner" : "default"}
+          onChange={(_, date) => {
+            setShowPicker(false);
+            if (date) setSelectedDate(date);
+          }}
+        />
+      )}
+    </View>
   );
 }
 
+/* ================= STYLES ================= */
+
 const styles = StyleSheet.create({
-  wrapper: {
+  wrapper: { flex: 1, backgroundColor: colors.background },
+  container: {
     flex: 1,
-    backgroundColor: colors.background,
+    padding: 12,
     paddingTop:
       Platform.OS === "android" ? (StatusBar.currentHeight ?? 24) + 8 : 16,
   },
-
-  /** HEADER **/
   backBtn: {
     alignSelf: "flex-start",
     backgroundColor: "rgba(0,0,0,0.05)",
     padding: 8,
     borderRadius: 12,
-    marginHorizontal: 16,
+    marginBottom: 12,
   },
+
   header: {
     backgroundColor: colors.darkHeader,
     padding: 20,
     borderRadius: 16,
-    margin: 16,
+    marginBottom: 16,
   },
-  headerTitle: {
-    color: colors.card,
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: 4,
-  },
+  headerTitle: { color: colors.card, fontSize: 22, fontWeight: "700" },
   courseTitle: {
     color: colors.card,
     fontSize: 18,
     fontWeight: "600",
-  },
-  sectionText: {
-    color: colors.card,
-    fontSize: 14,
     marginTop: 4,
   },
+  sectionText: { color: colors.card, fontSize: 14, marginTop: 4 },
 
-  /** TABLE **/
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingHorizontal: 16,
-    paddingTop: 16,
+  dateBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+    gap: 6,
   },
+  dateText: { color: "#fff", fontSize: 13 },
+
   tableHeader: {
     flexDirection: "row",
     backgroundColor: colors.tableHeader,
@@ -209,39 +281,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     alignItems: "center",
   },
-  cellText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: colors.textPrimary,
-  },
+  cellText: { fontSize: 14, fontWeight: "500", color: colors.textPrimary },
 
-  /** BUTTONS **/
   statusButton: {
     flex: 3,
     paddingVertical: 6,
     borderRadius: 8,
     alignItems: "center",
   },
-  buttonLabel: {
-    color: colors.buttonText,
-    fontSize: 13,
-    fontWeight: "600",
+  buttonLabel: { color: "#fff", fontSize: 13, fontWeight: "600" },
+
+  emptyText: {
+    marginTop: 20,
+    textAlign: "center",
+    color: colors.textPrimary,
+    opacity: 0.6,
   },
 
-  /** FLOATING BUTTON **/
-  fab: {
+  fabContainer: {
     position: "absolute",
     bottom: 24,
     right: 24,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    gap: 12,
+  },
+  fab: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: colors.accent,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
     elevation: 6,
   },
 });

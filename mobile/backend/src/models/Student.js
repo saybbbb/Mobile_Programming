@@ -20,19 +20,6 @@ const StudentSchema = new mongoose.Schema(
       trim: true,
     },
 
-    attendance: {
-      present: {
-        type: Number,
-        default: 0,
-        min: 0,
-      },
-      total: {
-        type: Number,
-        default: 0,
-        min: 0,
-      },
-    },
-
     grades: {
       midterm: {
         type: Number,

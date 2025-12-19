@@ -48,16 +48,23 @@ router.get("/:classId/students", async (req, res) => {
 });
 
 /**
- * UPDATE student
+ * UPDATE student (name, studentId, grades, remarks)
  * PUT /api/classes/students/:id
  */
 router.put("/students/:id", async (req, res) => {
   try {
-    const { name, studentId } = req.body;
+    const { name, studentId, grades, remarks } = req.body;
+
+    const updatePayload = {};
+
+    if (name !== undefined) updatePayload.name = name;
+    if (studentId !== undefined) updatePayload.studentId = studentId;
+    if (grades !== undefined) updatePayload.grades = grades;
+    if (remarks !== undefined) updatePayload.remarks = remarks;
 
     const student = await Student.findByIdAndUpdate(
       req.params.id,
-      { name, studentId },
+      updatePayload,
       { new: true }
     );
 
