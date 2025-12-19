@@ -1,32 +1,57 @@
-import React from "react";
-import {
-  SafeAreaView,
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ImageBackground,
-  Image,
-  FlatList,
-  StatusBar,
-  Platform,
-} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  FlatList,
+  Image,
+  ImageBackground,
+  Platform,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 const colors = {
-  background: "#0D1B2A", // deep navy
-  card: "#EAEAEA", // cream/off-white
-  accent: "#415A77", // muted slate blue
-  textPrimary: "#1B263B", // dark blue-gray
-  placeholder: "#7F8C99", // muted gray-blue
-  buttonBg: "#415A77", // slate accent
-  buttonText: "#EAEAEA", // light cream
-  link: "#1B263B", // deep navy link
+  background: "#0D1B2A",
+  card: "#EAEAEA",
+  accent: "#415A77",
+  textPrimary: "#1B263B",
+  placeholder: "#7F8C99",
+  buttonBg: "#415A77",
+  buttonText: "#EAEAEA",
+  link: "#1B263B",
+};
+
+type StoredUser = {
+  fullName: string;
+  email: string;
+  profileImage?: string;
 };
 
 export default function HomeScreen() {
   const router = useRouter();
+  const [user, setUser] = useState<StoredUser | null>(null);
+
+  // 🔹 Load user from AsyncStorage
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const storedUser = await AsyncStorage.getItem("user");
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
+      } catch (err) {
+        console.log("Failed to load user:", err);
+      }
+    };
+
+    loadUser();
+  }, []);
+
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -84,7 +109,7 @@ export default function HomeScreen() {
         >
           <View style={styles.headerOverlay} />
 
-          {/* Bell at Top Right */}
+          {/* Bell */}
           <TouchableOpacity style={styles.bellButton}>
             <Ionicons
               name="notifications-outline"
@@ -94,18 +119,22 @@ export default function HomeScreen() {
             <View style={styles.badge} />
           </TouchableOpacity>
 
-          {/* Content Row */}
+          {/* Header Content */}
           <View style={styles.headerContent}>
             <View style={styles.headerLeft}>
               <Text style={styles.welcomeText}>Welcome!</Text>
               <Text style={styles.subText}>
-                Hi User-01, Make Ravenscroft Proud!
+                👋 {user?.fullName || "User"}
               </Text>
               <Text style={styles.dateText}>{today}</Text>
             </View>
 
             <Image
-              source={require("../../assets/images/profile-placeholder.jpg")}
+              source={
+                user?.profileImage
+                  ? { uri: user.profileImage }
+                  : require("../../assets/images/profile-placeholder.jpg")
+              }
               style={styles.profileImage}
             />
           </View>

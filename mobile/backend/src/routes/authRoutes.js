@@ -1,23 +1,22 @@
 import express from "express";
 import jwt from "jsonwebtoken";
+import authMiddleware from "../middleware/authMiddleware.js";
 import User from "../models/User.js";
 
 const router = express.Router();
 
+/* ================= TOKEN ================= */
 const generateToken = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "15d" });
+  return jwt.sign({ userId }, process.env.JWT_SECRET, {
+    expiresIn: "15d",
+  });
 };
 
-// ====================== REGISTER ======================
+/* ================= REGISTER ================= */
 router.post("/register", async (req, res) => {
   try {
-    const {
-      fullName,
-      email,
-      password,
-      confirmPassword,
-      phoneNumber,
-    } = req.body;
+    const { fullName, email, password, confirmPassword, phoneNumber } =
+      req.body;
 
     if (!fullName || !email || !password || !phoneNumber) {
       return res.status(400).json({ message: "All fields are required" });
@@ -43,7 +42,9 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Phone number already taken" });
     }
 
-    const profileImage = `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`;
+    const profileImage = `https://api.dicebear.com/7.x/avataaars/png?seed=${encodeURIComponent(
+      email
+    )}&size=128`;
 
     const user = await User.create({
       fullName,
@@ -55,22 +56,23 @@ router.post("/register", async (req, res) => {
 
     const token = generateToken(user._id);
 
-    return res.status(201).json({
+    res.status(201).json({
       token,
       user: {
         id: user._id,
         fullName: user.fullName,
         email: user.email,
         phoneNumber: user.phoneNumber,
+        profileImage: user.profileImage,
       },
     });
   } catch (error) {
     console.error("REGISTER ERROR:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
-// ====================== LOGIN ======================
+/* ================= LOGIN ================= */
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -91,18 +93,59 @@ router.post("/login", async (req, res) => {
 
     const token = generateToken(user._id);
 
-    return res.status(200).json({
+    res.status(200).json({
       token,
       user: {
         id: user._id,
         fullName: user.fullName,
         email: user.email,
         phoneNumber: user.phoneNumber,
+        profileImage: user.profileImage,
       },
     });
   } catch (error) {
     console.error("LOGIN ERROR:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+/* ================= CHANGE PASSWORD ================= */
+/**
+ * CHANGE PASSWORD
+ * PUT /api/auth/change-password
+ */
+router.put("/change-password", authMiddleware, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (newPassword.length < 6) {
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 6 characters" });
+    }
+
+    // 🔴 FIX IS HERE
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("CHANGE PASSWORD ERROR:", err);
+    res.status(500).json({ message: "Failed to change password" });
   }
 });
 

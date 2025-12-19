@@ -1,17 +1,19 @@
-import React, { useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  TextInput,
   Modal,
   Platform,
+  ScrollView,
   StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import api from "../../../services/api";
 
 const colors = {
   background: "#EAEAEA",
@@ -26,84 +28,106 @@ const colors = {
   modalBg: "rgba(0,0,0,0.3)",
 };
 
+type Student = {
+  _id: string;
+  name: string;
+  grades?: {
+    midterm?: number | null;
+    final?: number | null;
+  };
+  remarks?: string;
+};
+
 export default function GradeDetails() {
-  const { gradeid, course, section } = useLocalSearchParams();
+  const { gradeid } = useLocalSearchParams<{ gradeid: string }>();
   const router = useRouter();
 
-  const [modalVisible, setModalVisible] = useState(false);
-  const [newStudent, setNewStudent] = useState({
-    name: "",
-    midterm: "",
-    final: "",
-    remarks: "",
-  });
+  const [students, setStudents] = useState<Student[]>([]);
 
-  const [students, setStudents] = useState([
-    {
-      id: "S1",
-      name: "Student 1",
-      midterm: "1.5",
-      final: "1.75",
-      remarks: "Passed",
-    },
-    {
-      id: "S2",
-      name: "Student 2",
-      midterm: "2.0",
-      final: "2.25",
-      remarks: "Passed",
-    },
-    {
-      id: "S3",
-      name: "Student 3",
-      midterm: "1.25",
-      final: "1.5",
-      remarks: "Passed",
-    },
-    {
-      id: "S4",
-      name: "Student 4",
-      midterm: "3.75",
-      final: "5.0",
-      remarks: "Failed",
-    },
-  ]);
+  /* EDIT STATE */
+  const [editVisible, setEditVisible] = useState(false);
+  const [editStudent, setEditStudent] = useState<Student | null>(null);
+  const [editMidterm, setEditMidterm] = useState("");
+  const [editFinal, setEditFinal] = useState("");
+  const [editRemarks, setEditRemarks] = useState("");
 
-  const getRemarksColor = (remarks: string) => {
-    if (remarks.toLowerCase().includes("pass")) return colors.success;
-    return colors.danger;
+  const [classInfo, setClassInfo] = useState<{
+    course: string;
+    section: string;
+  } | null>(null);
+
+  /* FETCH CLASS INFO */
+  useEffect(() => {
+    if (!gradeid) return;
+    api.get(`/classes/${gradeid}`).then((res) => setClassInfo(res.data));
+  }, [gradeid]);
+
+  /* FETCH STUDENTS */
+  const loadStudents = async () => {
+    if (!gradeid) return;
+    const res = await api.get(`/classes/${gradeid}/students`);
+    setStudents(res.data);
   };
 
-  const handleAddStudent = () => {
-    if (!newStudent.name.trim()) return;
-    const id = `S${students.length + 1}`;
-    setStudents([...students, { id, ...newStudent }]);
-    setNewStudent({ name: "", midterm: "", final: "", remarks: "" });
-    setModalVisible(false);
+  useFocusEffect(
+    useCallback(() => {
+      loadStudents();
+    }, [gradeid])
+  );
+
+  const openEdit = (student: Student) => {
+    setEditStudent(student);
+    setEditMidterm(String(student.grades?.midterm ?? ""));
+    setEditFinal(String(student.grades?.final ?? ""));
+    setEditRemarks(student.remarks ?? "");
+    setEditVisible(true);
+  };
+
+  const saveGrades = async () => {
+    if (!editStudent) return;
+
+    await api.put(`/classes/students/${editStudent._id}`, {
+      grades: {
+        midterm: editMidterm ? Number(editMidterm) : null,
+        final: editFinal ? Number(editFinal) : null,
+      },
+      remarks: editRemarks,
+    });
+
+    await loadStudents();
+    setEditVisible(false);
+    setEditStudent(null);
+  };
+
+  const getRemarksColor = (remarks?: string) => {
+    if (!remarks) return colors.textPrimary;
+    return remarks.toLowerCase().includes("pass")
+      ? colors.success
+      : colors.danger;
   };
 
   return (
     <View style={styles.wrapper}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: 140 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
       >
-        {/* Back Button */}
+        {/* BACK */}
         <TouchableOpacity
-          onPress={() => router.push("/(tabs)/grades")}
+          onPress={() => router.replace("/(tabs)/grades")}
           style={styles.backBtn}
         >
           <Ionicons name="arrow-back" size={24} color={colors.accent} />
         </TouchableOpacity>
 
-        {/* Header */}
+        {/* HEADER (UNCHANGED) */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Grades</Text>
-          <Text style={styles.courseTitle}>{course}</Text>
-          <Text style={styles.sectionText}>{section}</Text>
+          <Text style={styles.courseTitle}>{classInfo?.course}</Text>
+          <Text style={styles.sectionText}>{classInfo?.section}</Text>
         </View>
 
-        {/* Table Header */}
+        {/* TABLE HEADER */}
         <View style={styles.tableHeader}>
           <Text style={[styles.tableHeaderText, { flex: 4 }]}>Student</Text>
           <Text style={[styles.tableHeaderText, { flex: 2 }]}>Midterm</Text>
@@ -111,13 +135,12 @@ export default function GradeDetails() {
           <Text style={[styles.tableHeaderText, { flex: 2 }]}>Remarks</Text>
         </View>
 
-        {/* Table Rows */}
+        {/* TABLE ROWS */}
         {students.map((student) => (
-          <View key={student.id} style={styles.tableRow}>
-            {/* Student Name + Edit Icon */}
+          <View key={student._id} style={styles.tableRow}>
             <View style={[styles.studentCell, { flex: 4 }]}>
               <Text style={styles.tableCellText}>{student.name}</Text>
-              <TouchableOpacity style={styles.editBtn}>
+              <TouchableOpacity onPress={() => openEdit(student)}>
                 <Ionicons
                   name="create-outline"
                   size={18}
@@ -126,21 +149,18 @@ export default function GradeDetails() {
               </TouchableOpacity>
             </View>
 
-            {/* Midterm */}
             <Text
               style={[styles.tableCellText, { flex: 2, textAlign: "center" }]}
             >
-              {student.midterm}
+              {student.grades?.midterm ?? "-"}
             </Text>
 
-            {/* Final */}
             <Text
               style={[styles.tableCellText, { flex: 2, textAlign: "center" }]}
             >
-              {student.final}
+              {student.grades?.final ?? "-"}
             </Text>
 
-            {/* Remarks */}
             <Text
               style={[
                 styles.tableCellText,
@@ -151,82 +171,76 @@ export default function GradeDetails() {
                 },
               ]}
             >
-              {student.remarks}
+              {student.remarks || "-"}
             </Text>
           </View>
         ))}
 
-        {/* Floating Add Button fixed to bottom-right of the screen */}
-        <TouchableOpacity
-          style={styles.floatingAddButton}
-          onPress={() => setModalVisible(true)}
-          accessibilityLabel="Add Student"
-        >
-          <Ionicons name="add" size={28} color="#fff" />
-        </TouchableOpacity>
+        {students.length === 0 && (
+          <Text style={styles.emptyText}>No students found for this class</Text>
+        )}
+      </ScrollView>
 
-        {/* Modal for Adding Student */}
-        <Modal
-          visible={modalVisible}
-          animationType="fade"
-          transparent
-          onRequestClose={() => setModalVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContainer}>
-              <Text style={styles.modalTitle}>Add Student</Text>
+      {/* EDIT MODAL */}
+      <Modal visible={editVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Edit Grades</Text>
 
-              {["name", "midterm", "final", "remarks"].map((field) => (
-                <TextInput
-                  key={field}
-                  style={styles.modalInput}
-                  placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
-                  value={(newStudent as any)[field]}
-                  onChangeText={(text) =>
-                    setNewStudent({ ...newStudent, [field]: text })
-                  }
-                  keyboardType={
-                    field === "midterm" || field === "final"
-                      ? "decimal-pad"
-                      : "default"
-                  }
-                />
-              ))}
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Midterm (1–5)"
+              keyboardType="decimal-pad"
+              value={editMidterm}
+              onChangeText={setEditMidterm}
+            />
 
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={[
-                    styles.modalButton,
-                    { backgroundColor: colors.accent },
-                  ]}
-                  onPress={handleAddStudent}
-                >
-                  <Text style={styles.modalButtonText}>Add</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, { backgroundColor: "#aaa" }]}
-                  onPress={() => setModalVisible(false)}
-                >
-                  <Text style={styles.modalButtonText}>Cancel</Text>
-                </TouchableOpacity>
-              </View>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Final (1–5)"
+              keyboardType="decimal-pad"
+              value={editFinal}
+              onChangeText={setEditFinal}
+            />
+
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Remarks"
+              value={editRemarks}
+              onChangeText={setEditRemarks}
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.accent }]}
+                onPress={saveGrades}
+              >
+                <Text style={styles.modalButtonText}>Save</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: "#aaa" }]}
+                onPress={() => setEditVisible(false)}
+              >
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </Modal>
-      </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
 
+/* ================= STYLES ================= */
+
 const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
-    position: "relative",
     backgroundColor: colors.background,
   },
   container: {
     flex: 1,
-    backgroundColor: colors.background,
     padding: 12,
     paddingTop:
       Platform.OS === "android" ? (StatusBar.currentHeight ?? 24) + 8 : 16,
@@ -248,12 +262,12 @@ const styles = StyleSheet.create({
     color: colors.card,
     fontSize: 22,
     fontWeight: "700",
-    marginBottom: 4,
   },
   courseTitle: {
     color: colors.card,
     fontSize: 18,
     fontWeight: "600",
+    marginTop: 4,
   },
   sectionText: {
     color: colors.card,
@@ -293,26 +307,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
   },
-  editBtn: {
-    padding: 4,
+  emptyText: {
+    marginTop: 20,
+    textAlign: "center",
+    color: colors.textPrimary,
+    opacity: 0.6,
   },
-  floatingAddButton: {
-    position: "absolute",
-    bottom: 30,
-    right: 20,
-    backgroundColor: colors.accent,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.5,
-    elevation: 6,
-  },
-  /** MODAL **/
   modalOverlay: {
     flex: 1,
     backgroundColor: colors.modalBg,
