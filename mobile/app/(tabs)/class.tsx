@@ -1,8 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
+  Animated,
   FlatList,
   Image,
   ImageBackground,
@@ -11,9 +15,12 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
+import api from "../../services/api";
 
 const colors = {
   background: "#0D1B2A",
@@ -21,35 +28,155 @@ const colors = {
   accent: "#415A77",
   textPrimary: "#1B263B",
   placeholder: "#7F8C99",
-  buttonBg: "#415A77",
   buttonText: "#EAEAEA",
 };
 
 type StoredUser = {
   fullName: string;
-  email: string;
   profileImage?: string;
 };
 
+type ScheduleItem = {
+  day: string;
+  time: string;
+};
+
+type ClassItem = {
+  _id: string;
+  course: string;
+  section: string;
+  schedule: ScheduleItem[];
+};
+
+const SHEET_HEIGHT = 420;
+
 export default function ClassScreen() {
   const router = useRouter();
-  const [user, setUser] = useState<StoredUser | null>(null);
 
-  // 🔹 Load user from AsyncStorage
+  const [user, setUser] = useState<StoredUser | null>(null);
+  const [classes, setClasses] = useState<ClassItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [menuClass, setMenuClass] = useState<ClassItem | null>(null);
+
+  const [course, setCourse] = useState("");
+  const [section, setSection] = useState("");
+  const [schedule, setSchedule] = useState<ScheduleItem[]>([
+    { day: "", time: "" },
+  ]);
+
+  const [showDayPicker, setShowDayPicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [activeScheduleIndex, setActiveScheduleIndex] = useState<number | null>(
+    null
+  );
+
+  const createY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
+
+  /* LOAD USER */
   useEffect(() => {
-    const loadUser = async () => {
+    AsyncStorage.getItem("user").then((u) => {
+      if (u) setUser(JSON.parse(u));
+    });
+  }, []);
+
+  /* LOAD CLASSES */
+  useEffect(() => {
+    const load = async () => {
       try {
-        const storedUser = await AsyncStorage.getItem("user");
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        }
-      } catch (err) {
-        console.log("Failed to load user:", err);
+        const token = await AsyncStorage.getItem("token");
+        const res = await api.get("/classes", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setClasses(res.data);
+      } finally {
+        setLoading(false);
       }
     };
-
-    loadUser();
+    load();
   }, []);
+
+  /* CREATE SHEET CONTROLS */
+  const openCreate = () => {
+    Animated.timing(createY, {
+      toValue: 0,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeCreate = () => {
+    Animated.timing(createY, {
+      toValue: SHEET_HEIGHT,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => setMenuClass(null));
+  };
+
+  const addScheduleRow = () =>
+    setSchedule((prev) => [...prev, { day: "", time: "" }]);
+
+  const removeScheduleRow = (index: number) =>
+    setSchedule((prev) => prev.filter((_, i) => i !== index));
+
+  const editClass = (item: ClassItem) => {
+    setMenuClass(item);
+    setCourse(item.course);
+    setSection(item.section);
+    setSchedule(item.schedule.length ? item.schedule : [{ day: "", time: "" }]);
+    openCreate();
+  };
+
+  const confirmDelete = (item: ClassItem) => {
+    Alert.alert(
+      "Delete Class",
+      `Are you sure you want to delete ${item.course}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            const token = await AsyncStorage.getItem("token");
+            await api.delete(`/classes/${item._id}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            setClasses((prev) => prev.filter((c) => c._id !== item._id));
+            setMenuClass(null);
+          },
+        },
+      ]
+    );
+  };
+
+  const createClass = async () => {
+    const token = await AsyncStorage.getItem("token");
+    const cleanSchedule = schedule.filter((s) => s.day && s.time);
+
+    if (menuClass) {
+      const res = await api.put(
+        `/classes/${menuClass._id}`,
+        { course, section, schedule: cleanSchedule },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setClasses((prev) =>
+        prev.map((c) => (c._id === menuClass._id ? res.data : c))
+      );
+    } else {
+      const res = await api.post(
+        "/classes",
+        { course, section, schedule: cleanSchedule },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setClasses((prev) => [res.data, ...prev]);
+    }
+
+    setCourse("");
+    setSection("");
+    setSchedule([{ day: "", time: "" }]);
+    closeCreate();
+  };
 
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -58,77 +185,54 @@ export default function ClassScreen() {
     year: "numeric",
   });
 
-  const courses = [
-    {
-      id: "1",
-      course: "Mobile Programming - USTP",
-      section: "IT3R11 - BSIT",
-      user: user?.fullName || "User",
-      schedule: [
-        { day: "Monday", time: "3:30pm" },
-        { day: "Thursday", time: "3:30pm" },
-      ],
-    },
-    {
-      id: "2",
-      course: "Mobile Programming - USTP",
-      section: "IT3R12 - BSIT",
-      user: user?.fullName || "User",
-      schedule: [
-        { day: "Tuesday", time: "7:00am" },
-        { day: "Friday", time: "7:00am" },
-      ],
-    },
-    {
-      id: "3",
-      course: "Mobile Programming - USTP",
-      section: "IT3R13 - BSIT",
-      user: user?.fullName || "User",
-      schedule: [
-        { day: "Monday", time: "8:30am" },
-        { day: "Wednesday", time: "8:30am" },
-      ],
-    },
-  ];
-
-  const renderCourseCard = ({ item }: any) => (
+  const renderCourseCard = ({ item }: { item: ClassItem }) => (
     <TouchableOpacity
       style={styles.courseCard}
       activeOpacity={0.8}
       onPress={() =>
         router.push({
           pathname: "/(tabs)/class/[classid]",
-          params: {
-            classid: item.id,
-            course: item.course,
-            section: item.section,
-            user: item.user,
-          },
+          params: { classid: item._id },
         })
       }
     >
       <View style={styles.cardHeader}>
         <Text style={styles.courseTitle}>{item.course}</Text>
         <Text style={styles.courseSection}>{item.section}</Text>
-        <Text style={styles.courseUser}>{item.user}</Text>
+        <Text style={styles.courseUser}>{user?.fullName}</Text>
       </View>
 
       <View style={styles.cardFooter}>
         <View>
-          {item.schedule.map((sched: any, index: number) => (
-            <Text key={index} style={styles.scheduleText}>
-              {sched.day} - {sched.time}
+          {item.schedule.map((s, i) => (
+            <Text key={i} style={styles.scheduleText}>
+              {s.day} - {s.time}
             </Text>
           ))}
         </View>
+
         <View style={styles.iconRow}>
           <Ionicons name="people-outline" size={20} color={colors.card} />
           <Ionicons name="folder-outline" size={20} color={colors.card} />
-          <Ionicons name="ellipsis-vertical" size={20} color={colors.card} />
+          <TouchableOpacity onPress={() => setMenuClass(item)}>
+            <Ionicons
+              name="ellipsis-vertical"
+              size={20}
+              color={colors.card}
+            />
+          </TouchableOpacity>
         </View>
       </View>
     </TouchableOpacity>
   );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator style={{ marginTop: 50 }} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -137,8 +241,6 @@ export default function ClassScreen() {
         <ImageBackground
           source={require("../../assets/images/header-bg.jpg")}
           style={styles.headerBg}
-          imageStyle={{ borderRadius: 20 }}
-          resizeMode="cover"
         >
           <View style={styles.headerOverlay} />
 
@@ -158,9 +260,8 @@ export default function ClassScreen() {
             <View style={styles.badge} />
           </TouchableOpacity>
 
-          {/* Header Content */}
           <View style={styles.headerContent}>
-            <View style={styles.headerLeft}>
+            <View>
               <Text style={styles.welcomeText}>Class Sections</Text>
               <Text style={styles.subText}>Manage your Section/Class</Text>
               <Text style={styles.dateText}>{today}</Text>
@@ -178,18 +279,172 @@ export default function ClassScreen() {
         </ImageBackground>
       </View>
 
-      {/* COURSE LIST */}
       <FlatList
-        data={courses}
+        data={classes}
         renderItem={renderCourseCard}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
-        showsVerticalScrollIndicator={false}
+        keyExtractor={(item) => item._id}
+        contentContainerStyle={{ padding: 20, paddingBottom: 80 }}
       />
+
+      {/* FAB */}
+      <TouchableOpacity style={styles.fab} onPress={openCreate}>
+        <Ionicons name="add" size={28} color="#fff" />
+      </TouchableOpacity>
+
+      {/* CONTEXT MENU */}
+      {menuClass && (
+        <TouchableWithoutFeedback onPress={() => setMenuClass(null)}>
+          <View style={styles.overlay}>
+            <View style={styles.menu}>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => editClass(menuClass)}
+              >
+                <Text style={styles.menuText}>Edit</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => confirmDelete(menuClass)}
+              >
+                <Text style={[styles.menuText, { color: "red" }]}>
+                  Delete
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+      )}
+
+      {/* CREATE SHEET */}
+      <Animated.View
+        style={[styles.sheet, { transform: [{ translateY: createY }] }]}
+      >
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>
+            {menuClass ? "Edit Class" : "Add Class"}
+          </Text>
+          <TouchableOpacity onPress={closeCreate}>
+            <Ionicons name="close" size={24} />
+          </TouchableOpacity>
+        </View>
+
+        <TextInput
+          placeholder="Course"
+          value={course}
+          onChangeText={setCourse}
+          style={styles.input}
+        />
+
+        <TextInput
+          placeholder="Section"
+          value={section}
+          onChangeText={setSection}
+          style={styles.input}
+        />
+
+        <Text style={styles.label}>Schedule</Text>
+
+        {schedule.map((s, i) => (
+          <View key={i} style={styles.scheduleRow}>
+            <TouchableOpacity
+              style={[styles.input, styles.halfInput]}
+              onPress={() => {
+                setActiveScheduleIndex(i);
+                setShowDayPicker(true);
+              }}
+            >
+              <Text
+                style={{
+                  color: s.day ? colors.textPrimary : colors.placeholder,
+                }}
+              >
+                {s.day || "Select day"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.input, styles.halfInput]}
+              onPress={() => {
+                setActiveScheduleIndex(i);
+                setShowTimePicker(true);
+              }}
+            >
+              <Text
+                style={{
+                  color: s.time ? colors.textPrimary : colors.placeholder,
+                }}
+              >
+                {s.time || "Select time"}
+              </Text>
+            </TouchableOpacity>
+
+            {schedule.length > 1 && (
+              <TouchableOpacity
+                style={styles.removeBtn}
+                onPress={() => removeScheduleRow(i)}
+              >
+                <Ionicons name="close" size={20} />
+              </TouchableOpacity>
+            )}
+          </View>
+        ))}
+
+        <TouchableOpacity onPress={addScheduleRow}>
+          <Text style={{ color: colors.accent }}>+ Add another schedule</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.saveBtn} onPress={createClass}>
+          <Text style={styles.saveText}>
+            {menuClass ? "Update Class" : "Save Class"}
+          </Text>
+        </TouchableOpacity>
+      </Animated.View>
+
+      {/* PICKERS */}
+      {showDayPicker && (
+        <DateTimePicker
+          mode="date"
+          value={new Date()}
+          onChange={(_, date) => {
+            setShowDayPicker(false);
+            if (!date || activeScheduleIndex === null) return;
+            const day = date.toLocaleDateString("en-US", {
+              weekday: "long",
+            });
+            setSchedule((prev) => {
+              const copy = [...prev];
+              copy[activeScheduleIndex].day = day;
+              return copy;
+            });
+          }}
+        />
+      )}
+
+      {showTimePicker && (
+        <DateTimePicker
+          mode="time"
+          value={new Date()}
+          onChange={(_, date) => {
+            setShowTimePicker(false);
+            if (!date || activeScheduleIndex === null) return;
+            const time = date.toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+            });
+            setSchedule((prev) => {
+              const copy = [...prev];
+              copy[activeScheduleIndex].time = time;
+              return copy;
+            });
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -198,7 +453,6 @@ const styles = StyleSheet.create({
       Platform.OS === "android" ? (StatusBar.currentHeight ?? 24) + 8 : 16,
   },
 
-  /** HEADER **/
   headerCard: {
     backgroundColor: colors.background,
     height: 170,
@@ -206,12 +460,19 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 20,
     marginBottom: 20,
     overflow: "hidden",
-    elevation: 6,
   },
-  headerBg: { flex: 1, justifyContent: "space-between", padding: 20 },
+  headerBg: { flex: 1, padding: 20 },
   headerOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(13,27,42,0.6)",
+  },
+  backBtn: {
+    position: "absolute",
+    top: 16,
+    left: 16,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    padding: 8,
+    borderRadius: 12,
   },
   bellButton: {
     position: "absolute",
@@ -220,7 +481,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.2)",
     padding: 8,
     borderRadius: 12,
-    zIndex: 2,
   },
   badge: {
     position: "absolute",
@@ -235,18 +495,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    flex: 1,
     paddingTop: 40,
   },
-  headerLeft: { flex: 1 },
   welcomeText: { fontSize: 26, fontWeight: "700", color: colors.buttonText },
   subText: { fontSize: 14, color: colors.card, marginTop: 4 },
   dateText: {
-    backgroundColor: colors.card,
+    backgroundColor: "rgba(255,255,255,0.9)",
     color: colors.textPrimary,
     fontWeight: "600",
     fontSize: 13,
-    alignSelf: "flex-start",
     paddingVertical: 6,
     paddingHorizontal: 14,
     borderRadius: 20,
@@ -260,38 +517,126 @@ const styles = StyleSheet.create({
     borderColor: colors.card,
   },
 
-  /** COURSE CARD **/
   courseCard: {
     backgroundColor: colors.background,
     borderBottomLeftRadius: 25,
     borderBottomRightRadius: 25,
     marginBottom: 25,
     overflow: "hidden",
-    elevation: 3,
   },
   cardHeader: { padding: 12 },
-  courseTitle: { color: colors.card, fontSize: 16, fontWeight: "bold" },
-  courseSection: { color: colors.accent, fontSize: 14, marginTop: 2 },
-  courseUser: { color: colors.card, fontSize: 13, marginTop: 2 },
+  courseTitle: { color: colors.card, fontSize: 16, fontWeight: "700" },
+  courseSection: { color: colors.accent },
+  courseUser: { color: colors.card },
+
   cardFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
     backgroundColor: colors.accent,
     paddingVertical: 10,
     paddingHorizontal: 14,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
   },
-  scheduleText: { color: colors.card, fontSize: 13 },
+  scheduleText: { color: colors.card },
   iconRow: { flexDirection: "row", gap: 16 },
-  backBtn: {
+
+  fab: {
     position: "absolute",
-    top: 16,
-    left: 16,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    padding: 8,
+    bottom: 24,
+    right: 24,
+    backgroundColor: colors.accent,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+
+  menu: {
+    position: "absolute",
+    right: 20,
+    bottom: 120,
+    backgroundColor: "#fff",
     borderRadius: 12,
-    zIndex: 2,
+    paddingVertical: 8,
+    width: 140,
+    elevation: 8,
+  },
+  menuItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  menuText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.textPrimary,
+  },
+
+  sheet: {
+    position: "absolute",
+    bottom: 0,
+    width: "100%",
+    height: SHEET_HEIGHT,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+  },
+  sheetHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: colors.textPrimary,
+  },
+
+  label: {
+    color: colors.accent,
+    marginTop: 12,
+    marginBottom: 6,
+    fontWeight: "600",
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    backgroundColor: "#fff",
+  },
+  scheduleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 12,
+  },
+  halfInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  removeBtn: {
+    paddingHorizontal: 4,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  saveBtn: {
+    backgroundColor: colors.accent,
+    padding: 14,
+    borderRadius: 10,
+    marginTop: 12,
+  },
+  saveText: {
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: "600",
   },
 });
